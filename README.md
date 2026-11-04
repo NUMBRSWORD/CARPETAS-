@@ -43,8 +43,8 @@ neutro. El buscador oculta las tarjetas que no coinciden. Para ver cambios de es
 plantilla basta recargar el portal; no hace falta reiniciar el servidor.
 
 Justo debajo del buscador están las pestañas **Mis carpetas**, **Enviar documento** y
-**Mis envíos**. La barra permanece visible al desplazarse y cada panel aparece bajo
-ella, sin tener que bajar al final de las carpetas. Cambiar de pestaña conserva el
+**Mis envíos**. La barra se desplaza junto con la página y no se superpone al contenido.
+Cada panel aparece bajo ella, sin bajar al final de las carpetas. Cambiar de pestaña conserva el
 borrador y el archivo seleccionado. El botón de una
 carpeta abre la pestaña de envío con esa carpeta elegida. Las pestañas también se
 pueden recorrer con las flechas del teclado, Inicio y Fin.
