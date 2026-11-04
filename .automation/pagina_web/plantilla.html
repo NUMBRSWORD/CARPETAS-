@@ -433,6 +433,8 @@ document.addEventListener('click',e=>{
   if(t.id==='lfVaciar'){if(LF.ocupado)return;LF.filas=[];LF.hecho='';return pintarLF()}
   if(t.dataset.lfquitar!==undefined){if(LF.ocupado)return;LF.filas.splice(+t.dataset.lfquitar,1);return pintarLF()}
   if(t.dataset.enlace)return mostrarEnlace(t.dataset.enlace);
+  if(t.dataset.cuenta)return crearCuenta(t.dataset.cuenta);
+  if(t.id==='cuentasTodas')return crearCuentasTodas(t);
   if(t.dataset.envacep)return aceptarEnvio(t.dataset.envacep,t);
   if(t.dataset.envest){const [i,est]=t.dataset.envest.split('|');return estadoEnvio(i,est).catch(e=>alert(e.message))}
   if(t.id==='bkTodo')return respaldoCompleto(t);
@@ -603,7 +605,7 @@ function tarjetas(){
 }
 new MutationObserver(tarjetas).observe($('app'),{childList:true,subtree:true});
 cargar();avisoGuardado();render();
-if(SRV){refrescarRecibidos();setInterval(refrescarRecibidos,60000);if(!SRV.store)setTimeout(()=>alert('La base de datos de esta PC está vacía. Para pasar lo que tenías: abre la página anterior con ABRIR PAGINA ANTERIOR.bat, ve a Ajustes, descarga el respaldo con documentos y cárgalo aquí en Ajustes.'),300)}
+if(SRV){refrescarRecibidos();refrescarCuentas();setInterval(refrescarRecibidos,60000);if(!SRV.store)setTimeout(()=>alert('La base de datos de esta PC está vacía. Para pasar lo que tenías: abre la página anterior con ABRIR PAGINA ANTERIOR.bat, ve a Ajustes, descarga el respaldo con documentos y cárgalo aquí en Ajustes.'),300)}
 </script>
 </body>
 </html>

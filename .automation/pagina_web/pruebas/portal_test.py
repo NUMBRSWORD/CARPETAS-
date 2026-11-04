@@ -1,6 +1,7 @@
 """Portal personal: permisos y flujo de envío, solo base temporal y datos ficticios."""
 import datetime as dt
 import json
+import time
 import unittest
 import urllib.parse
 import sys
@@ -10,6 +11,20 @@ from servidor_test import PruebasServidor
 
 
 class PruebasPortal(PruebasServidor):
+    def test_enlace_publico_solo_se_anuncia_con_conexion_reciente(self):
+        self.preparar()
+        ruta = Path(self.tmp.name) / 'acceso_internet.json'
+        try:
+            def info():
+                return json.loads(self.peticion('GET', '/api/info')[1]).get('publicacion')
+            ruta.write_text(json.dumps({'activo': True, 'portal': 'https://prueba.example.test', 'senal': time.time(), 'entrada': 'https://numbrsword.github.io/mis-carpetas/'}), encoding='utf-8')
+            self.assertEqual(info()['portal'], 'https://prueba.example.test')
+            for cambio in [{'activo': False}, {'senal': time.time()-100}, {'portal': 'http://prueba.example.test'}, {'portal': 'https://clave@prueba.example.test'}, {'portal': 'https://prueba.example.test/admin'}]:
+                ruta.write_text(json.dumps({'activo': True, 'portal': 'https://prueba.example.test', 'senal': time.time(), **cambio}), encoding='utf-8')
+                self.assertIsNone(info())
+        finally:
+            ruta.unlink(missing_ok=True)
+
     def preparar(self, homonimo=False, aviso=7):
         personal = [{'id': 'A', 'grado': 'S2 PNP', 'nombre': 'PEREZ GOMEZ ANA'}, {'id': 'B', 'grado': 'S1 PNP', 'nombre': 'RIVERA SOL LUIS'}]
         if homonimo:
@@ -57,8 +72,10 @@ class PruebasPortal(PruebasServidor):
     def test_envio_propio_llega_por_revisar_y_no_descarga_carpeta(self):
         a, _ = self.preparar()
         anterior = self.estado()['store']
-        codigo, _ = self.peticion('POST', '/e/'+a+'/enviar', b'%PDF-ficticio', {'X-Carpeta': 'PRUEBA-1', 'X-Tipo': 'informe', 'Content-Type': 'application/pdf', 'X-Nombre': 'informe.pdf'})
+        codigo, _ = self.peticion('POST', '/e/'+a+'/enviar', b'%PDF-ficticio', {'X-Carpeta': 'PRUEBA-1', 'X-Tipo': 'ampliacion', 'Content-Type': 'application/pdf', 'X-Nombre': 'informe.pdf'})
         self.assertEqual(codigo, 200)
+        # Por ahora el efectivo solo envía cargo o ampliación (decisión del usuario).
+        self.assertEqual(self.peticion('POST', '/e/'+a+'/enviar', b'%PDF-ficticio', {'X-Carpeta': 'PRUEBA-1', 'X-Tipo': 'informe', 'Content-Type': 'application/pdf'})[0], 400)
         self.assertEqual(self.estado()['store'], anterior)
         envios = json.loads(self.peticion('GET', '/api/envios')[1])
         envio = next(x for x in envios if x['carpeta'] == 'PRUEBA-1' and x['efectivo'] == 'A')
@@ -69,7 +86,7 @@ class PruebasPortal(PruebasServidor):
     def test_no_envia_para_carpeta_ajena_ni_cerrada(self):
         a, _ = self.preparar()
         for carpeta in ('PRUEBA-2', 'PRUEBA-3', 'ADIC-A'):
-            self.assertEqual(self.peticion('POST', '/e/'+a+'/enviar', b'%PDF-ficticio', {'X-Carpeta': carpeta, 'X-Tipo': 'informe', 'Content-Type': 'application/pdf'})[0], 400)
+            self.assertEqual(self.peticion('POST', '/e/'+a+'/enviar', b'%PDF-ficticio', {'X-Carpeta': carpeta, 'X-Tipo': 'ampliacion', 'Content-Type': 'application/pdf'})[0], 400)
 
     def test_rotar_enlace_invalida_portal_y_archivos_anteriores(self):
         a, _ = self.preparar()

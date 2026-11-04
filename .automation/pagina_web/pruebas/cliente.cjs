@@ -1,4 +1,10 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const {codigoPersonal,origenPortal}=require('../../../docs/portal.js');
+assert.equal(codigoPersonal('https://ejemplo.test/e/'+'a'.repeat(30)),'a'.repeat(30));
+assert.equal(codigoPersonal('javascript:alert(1)'),'');
+assert.equal(codigoPersonal('https://ejemplo.test/api/estado'),'');
+assert.equal(origenPortal('https://ejemplo.test/'),'https://ejemplo.test');
+for(const valor of ['http://ejemplo.test/','https://clave@ejemplo.test/','https://ejemplo.test/admin','javascript:alert(1)'])assert.equal(origenPortal(valor),'');
 const raiz=path.resolve(__dirname,'..');
 const base=[
  {id:'PRUEBA-1',cf:'CF 257-2026',sec:'FAMILIA',resp:'S2 PNP PÉREZ GÓMEZ ANA',imp:'Persona ficticia',venc:'2026-12-10',rem:'NO',decbaj:'2026-11-01',doc:'Informe ficticio para comprobar una etapa larga en celular'},

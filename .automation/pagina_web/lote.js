@@ -51,8 +51,8 @@ function vEfectivos(){
   const c=cargas();
   const orden=[...store.efectivos].sort((a,b)=>(b.activo?1:0)-(a.activo?1:0)||c.get(b.id).p-c.get(a.id).p||a.nombre.localeCompare(b.nombre));
   $('app').innerHTML=cabecera('Personal','Efectivos a cargo','Marca como activos a quienes reciben carpetas: solo ellos aparecen para escoger. El cargo es opcional y sale en sus decretos y memorandos')+
-   '<div class="panel"><div class="row" style="margin-bottom:12px"><button class="btn main" id="efNuevo">Agregar efectivo</button><label>Buscar<input id="efBuscar" type="search" placeholder="Apellido, CIP o DNI"></label></div><div class="scroll"><table class="ef-tabla tabla-personal tarjetas"><thead><tr><th>Activo</th><th>Grado</th><th>Apellidos y nombres</th><th>CIP</th><th>DNI</th><th>Cargo</th><th>Sección</th><th class="num">Pendientes</th><th class="num">Vencidas</th>'+(SRV?'<th>Enlace</th>':'')+'</tr></thead><tbody>'+
-   orden.map(e=>'<tr data-ef="'+esc(e.id)+'"><td><input type="checkbox" data-eff="activo"'+(e.activo?' checked':'')+' aria-label="Activo"></td><td><input data-eff="grado" value="'+esc(e.grado)+'" aria-label="Grado"></td><td><input data-eff="nombre" value="'+esc(e.nombre)+'" aria-label="Apellidos y nombres"></td><td><input data-eff="cip" value="'+esc(e.cip||'')+'" aria-label="CIP"></td><td><input data-eff="dni" value="'+esc(e.dni||'')+'" aria-label="DNI"></td><td><input data-eff="cargo" value="'+esc(e.cargo||'')+'" aria-label="Cargo"></td><td><select data-eff="seccion" aria-label="Sección">'+['',...SECCIONES].map(s=>'<option value="'+esc(s)+'"'+(s===seccionEf(e)?' selected':'')+'>'+esc(s||'—')+'</option>').join('')+'</select></td><td class="num">'+c.get(e.id).p+'</td><td class="num">'+c.get(e.id).v+'</td>'+(SRV?'<td><button class="btn" data-enlace="'+esc(e.id)+'">Enlace</button></td>':'')+'</tr>').join('')+
+   '<div class="panel"><div class="row" style="margin-bottom:12px"><button class="btn main" id="efNuevo">Agregar efectivo</button>'+(SRV?'<button class="btn" id="cuentasTodas">Crear usuarios de todos los activos (CIP / DNI)</button>':'')+'<label>Buscar<input id="efBuscar" type="search" placeholder="Apellido, CIP o DNI"></label></div><div class="scroll"><table class="ef-tabla tabla-personal tarjetas"><thead><tr><th>Activo</th><th>Grado</th><th>Apellidos y nombres</th><th>CIP</th><th>DNI</th><th>Cargo</th><th>Sección</th><th class="num">Pendientes</th><th class="num">Vencidas</th>'+(SRV?'<th>Enlace</th>':'')+'</tr></thead><tbody>'+
+   orden.map(e=>'<tr data-ef="'+esc(e.id)+'"><td><input type="checkbox" data-eff="activo"'+(e.activo?' checked':'')+' aria-label="Activo"></td><td><input data-eff="grado" value="'+esc(e.grado)+'" aria-label="Grado"></td><td><input data-eff="nombre" value="'+esc(e.nombre)+'" aria-label="Apellidos y nombres"></td><td><input data-eff="cip" value="'+esc(e.cip||'')+'" aria-label="CIP"></td><td><input data-eff="dni" value="'+esc(e.dni||'')+'" aria-label="DNI"></td><td><input data-eff="cargo" value="'+esc(e.cargo||'')+'" aria-label="Cargo"></td><td><select data-eff="seccion" aria-label="Sección">'+['',...SECCIONES].map(s=>'<option value="'+esc(s)+'"'+(s===seccionEf(e)?' selected':'')+'>'+esc(s||'—')+'</option>').join('')+'</select></td><td class="num">'+c.get(e.id).p+'</td><td class="num">'+c.get(e.id).v+'</td>'+(SRV?'<td style="white-space:nowrap"><button class="btn" data-cuenta="'+esc(e.id)+'">'+(CUENTAS[e.id]?'Reiniciar contraseña':'Crear usuario')+'</button> <button class="btn" data-enlace="'+esc(e.id)+'">Enlace</button>'+(CUENTAS[e.id]?'<br><small class="muted">Usuario '+esc(CUENTAS[e.id].usuario)+(CUENTAS[e.id].cambiar?' · falta su primer ingreso':'')+(CUENTAS[e.id].bloqueada?' · bloqueada':'')+'</small>':'')+'</td>':'')+'</tr>').join('')+
    '</tbody></table></div></div>';
 }
 
@@ -1004,13 +1004,44 @@ function vGuia(){
 }
 
 // --- Enlace personal de cada efectivo y documentos que envían ---
+// --- Usuario (CIP) y contraseña del efectivo, como en Moral y Disciplina ---
+let CUENTAS={};
+async function refrescarCuentas(){
+  if(!SRV)return;
+  try{const r=await fetch('api/cuentas');if(r.ok){const n=await r.json();const cambio=JSON.stringify(n)!==JSON.stringify(CUENTAS);CUENTAS=n;if(cambio&&S.view==='efectivos')render()}}catch(e){}
+}
+async function crearCuentasTodas(boton){
+  if(!confirm('Se creará el usuario de cada efectivo activo que aún no lo tenga.\n\nUsuario: su CIP · Contraseña inicial: su DNI.\nAl primer ingreso cada uno debe cambiarla. Las cuentas que ya existen no se tocan.\n\n¿Continuar?'))return;
+  boton.disabled=true;
+  try{
+    const r=await fetch('api/cuentas/todas',{method:'POST',headers:{...ESCRIBIR,'Content-Type':'application/json'},body:'{}'});
+    if(!r.ok)throw new Error(await r.text());
+    const j=await r.json(),bases=j.direcciones.filter(d=>!d.includes('127.0.0.1')),url=j.publicacion?j.publicacion.portal+'/ingresar':(bases[0]||j.direcciones[0])+'ingresar';
+    await refrescarCuentas();render();
+    alert(j.creadas.length+' usuario(s) creado(s). Cada uno entra en '+url+' con su CIP y su DNI, y debe cambiar la contraseña al primer ingreso.'+(j.faltan.length?'\n\nNo se crearon (completa sus datos en Efectivos):\n- '+j.faltan.join('\n- '):''));
+  }catch(err){alert('No se pudieron crear: '+(err.message||'error'))}
+  finally{boton.disabled=false}
+}
+async function crearCuenta(id){
+  const e=store.efectivos.find(x=>x.id===id),hay=!!CUENTAS[id];
+  if(hay&&!confirm('¿Reiniciar la contraseña de '+nombreEf(e)+'? La anterior deja de servir y se cierran sus sesiones abiertas.'))return;
+  try{
+    const r=await fetch('api/cuenta',{method:'POST',headers:{...ESCRIBIR,'Content-Type':'application/json'},body:JSON.stringify({efectivo:id})});
+    if(!r.ok)throw new Error(await r.text());
+    const j=await r.json(),bases=j.direcciones.filter(d=>!d.includes('127.0.0.1')),publico=j.publicacion;
+    const url=publico?publico.portal+'/ingresar':(bases[0]||j.direcciones[0])+'ingresar';
+    await refrescarCuentas();
+    prompt('Entrégale estos datos a '+nombreEf(e)+' en persona. La contraseña inicial es su DNI (o una temporal si no tiene DNI anotado): al primer ingreso debe crear una propia.\n\nDirección: '+url+'\nUsuario: '+j.usuario+'\nContraseña inicial: '+j.clave+'\n\nCopia el texto:',
+      'Mis carpetas fiscales · Dirección: '+url+' · Usuario: '+j.usuario+' · Contraseña inicial: '+j.clave);
+  }catch(err){alert('No se pudo crear el usuario: '+(err.message||'error'))}
+}
 async function mostrarEnlace(id,nuevo){
   const e=store.efectivos.find(x=>x.id===id);
   try{
     const r=await fetch('api/enlace',{method:'POST',headers:{...ESCRIBIR,'Content-Type':'application/json'},body:JSON.stringify({efectivo:id,nuevo:!!nuevo})});
     if(!r.ok)throw new Error(await r.text());
-    const j=await r.json(),bases=j.direcciones.filter(d=>!d.includes('127.0.0.1')),url=(bases[0]||j.direcciones[0])+'e/'+j.token;
-    prompt((bases.length?'':'Por ahora este enlace solo abre en esta PC: falta permitir la conexión desde otros equipos.\n\n')+'Enlace personal de '+nombreEf(e)+'. Cópialo y envíaselo solo a él o ella:',url);
+    const j=await r.json(),bases=j.direcciones.filter(d=>!d.includes('127.0.0.1')),publico=j.publicacion,url=publico?(publico.entrada?publico.entrada+'#'+j.token:publico.portal+'/e/'+j.token):(bases[0]||j.direcciones[0])+'e/'+j.token;
+    prompt((publico?'Acceso por internet activo. La PC debe permanecer encendida y conectada.\n\n':bases.length?'':'Por ahora este enlace solo abre en esta PC: falta permitir la conexión desde otros equipos.\n\n')+'Enlace personal de '+nombreEf(e)+'. Cópialo y envíaselo solo a él o ella:',url);
   }catch(err){alert('No se pudo crear el enlace: '+(err.message||'error'))}
 }
 let ENVIOS=[];
@@ -1018,7 +1049,7 @@ const FECHAS_REC={};
 let recEnCurso=false,recGuardando=false,recRepintar=false;
 const nuevosRec=()=>ENVIOS.filter(x=>x.estado==='nuevo').length;
 const ESTADO_ENV={nuevo:['Por revisar','t-amber'],aceptado:['Guardado en la carpeta','t-green'],revisado:['Revisado','t-gray'],rechazado:['Observado','t-red']};
-const TIPO_ENV={informe:'Informe policial',cargo:'Cargo de remisión',otro:'Otro documento'};
+const TIPO_ENV={informe:'Informe policial',cargo:'Cargo de remisión',ampliacion:'Ampliación de investigación',otro:'Otro documento'};
 async function refrescarRecibidos(forzar=false){
   if(!SRV||recEnCurso)return;
   recEnCurso=true;
@@ -1058,7 +1089,7 @@ async function aceptarEnvio(id,boton){
   const x=ENVIOS.find(y=>y.id===+id),r=x&&byId.get(x.carpeta);
   if(!r)return alert('No se encontró la carpeta de este documento.');
   if(recGuardando)return;
-  const tipo=x.tipo==='cargo'?'car':x.tipo==='informe'?'inf':'otro',fecha=tipo==='car'?(document.querySelector('[data-envfec="'+id+'"]')||{}).value:'';
+  const tipo=x.tipo==='cargo'?'car':x.tipo==='informe'?'inf':'otro',docTipo=x.tipo==='ampliacion'?'ampliacion':'otro',fecha=tipo==='car'?(document.querySelector('[data-envfec="'+id+'"]')||{}).value:'';
   const yaGuardado=tipo==='otro'?(r.documentos||[]).some(m=>m.envioId===x.id):r[ADJ[tipo].k]?.envioId===x.id;
   if(tipo==='car'&&!yaGuardado&&!isISO(fecha||''))return alert('Escribe la fecha del sello de la Fiscalía.');
   if(tipo!=='otro'&&!yaGuardado&&r[ADJ[tipo].k]&&!confirm('Esta carpeta ya tiene '+ADJ[tipo].t.toLowerCase()+'. ¿Reemplazarlo por este?'))return;
@@ -1069,7 +1100,7 @@ async function aceptarEnvio(id,boton){
     if(!respuesta.ok)throw new Error('No se pudo descargar el documento recibido.');
     const b=await respuesta.blob();
     if(tipo==='otro'){
-      const meta=await guardarDocumentoCarpeta(r.id,'otro',new File([b],x.nombre,{type:x.mime}));
+      const meta=await guardarDocumentoCarpeta(r.id,docTipo,new File([b],x.nombre,{type:x.mime}));
       setField(r.id,'documentos',r.documentos.map(m=>m.clave===meta.clave?{...m,envioId:x.id}:m));
     }else await guardarAdj(r,tipo,new File([b],x.nombre,{type:x.mime}),fecha,'',{envioId:x.id});
     }

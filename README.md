@@ -31,6 +31,17 @@ su motor/idioma español y JSZip, en `vendor/`, sin descargas al usar la aplicac
 
 ## Acceso por internet sin Tailscale
 
+Entrada estable: [Mis carpetas](https://numbrsword.github.io/mis-carpetas/).
+La pantalla de acceso se mantiene en un repositorio separado para conservar su
+dirección al reiniciar el túnel. Los efectivos ingresan con su usuario y contraseña;
+la administración sigue en la PC. No hay acceso a los expedientes desde el código público.
+
+El portal presenta las carpetas en una cuadrícula que ocupa el ancho de la pantalla:
+tarjetas cuadradas en escritorio y una columna en celular. Rojo indica vencidas o
+próximas a vencer; verde indica vigentes. Las carpetas sin fecha mantienen un tono
+neutro. El buscador oculta las tarjetas que no coinciden. Para ver cambios de esta
+plantilla basta recargar el portal; no hace falta reiniciar el servidor.
+
 GitHub almacena el código; GitHub Pages solo sirve archivos estáticos. El portal necesita
 comunicarse con la PC encendida y conectada para leer datos y recibir archivos.
 
@@ -56,14 +67,15 @@ con su titular y renovarlo si se divulga.
 Cada efectivo ve solo sus pendientes, documentos y envíos. El archivo enviado llega
 como «Por revisar»; en **Recibidos** el administrador lo confirma u observa. Los
 recordatorios aparecen al abrir/actualizar el portal; no hay notificaciones con la
-página cerrada. La configuración y prueba de la dirección pública se documentarán
-cuando estén activadas; subir código no significa haber publicado el servicio.
+página cerrada. El acceso usa un túnel temporal: la PC debe permanecer encendida y
+conectada. `INICIAR ACCESO INTERNET.bat` mantiene la conexión y actualiza la dirección
+en la entrada estable; `DETENER ACCESO INTERNET.bat` la cierra sin cerrar la base local.
 
 ### Entrada desde GitHub Pages
 
 `docs/` contiene únicamente la pantalla pública de acceso, sin expedientes ni códigos
-personales. Pages se configura desde `main`, carpeta `/docs`. `docs/config.json` solo
-se habilita cuando el portal HTTPS esté listo. El enlace compartido puede tener la forma
+personales. Pages se configura desde `main`, carpeta `/docs`, y conduce a la entrada
+estable indicada arriba. El enlace personal antiguo puede tener la forma
 `https://<usuario>.github.io/<repositorio>/#<código-personal>`: el fragmento no se envía a
 GitHub y la pantalla lleva al portal de la PC. No publicar códigos de efectivos en Git.
 La pantalla también permite pegar el enlace personal entregado por Mesa de Partes.

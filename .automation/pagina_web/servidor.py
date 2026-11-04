@@ -33,9 +33,11 @@ MARCA = '<script type="application/json" id="servidor">null</script>'
 MAX_ARCHIVO = 25 * 1024 * 1024
 MAX_ESTADO = 20 * 1024 * 1024
 MAX_RESTAURACION = 128 * 1024 * 1024
-VERSION_SERVIDOR = '2026.11.04.1'
+VERSION_SERVIDOR = '2026.11.04.2'
 MIME_DOCUMENTOS = {'application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'image/heic', 'image/heif'}
-TIPOS_ENVIO = {'informe': 'Informe policial', 'cargo': 'Cargo de remisión a la Fiscalía', 'otro': 'Otro documento'}
+TIPOS_ENVIO = {'informe': 'Informe policial', 'cargo': 'Cargo de remisión a la Fiscalía', 'otro': 'Otro documento', 'ampliacion': 'Ampliación de investigación'}
+# Lo que el efectivo puede elegir hoy (decisión del usuario); los demás tipos quedan para mostrar envíos anteriores.
+TIPOS_PORTAL = ('cargo', 'ampliacion')
 ESTADOS_ENVIO = {'nuevo': 'Enviado, por revisar', 'aceptado': 'Recibido', 'revisado': 'Revisado', 'rechazado': 'Observado: vuelve a enviarlo'}
 
 args = argparse.ArgumentParser()
@@ -61,6 +63,22 @@ def leer_config():
         return json.loads(CONFIG.read_text(encoding='utf-8'))
     except (OSError, ValueError):
         return {'red_local': False}
+
+
+def publicacion_personal():
+    """Una entrada caída o sin señal reciente nunca sustituye los enlaces privados."""
+    try:
+        dato = json.loads((DATOS / 'acceso_internet.json').read_text(encoding='utf-8'))
+        edad = dt.datetime.now().timestamp() - float(dato.get('senal', 0))
+        u = urllib.parse.urlsplit(dato.get('portal', ''))
+        if dato.get('activo') is not True or not 0 <= edad < 90 or u.scheme != 'https' or not u.hostname or u.username or u.password or u.port or u.path not in ('', '/') or u.query or u.fragment:
+            return None
+        entrada = dato.get('entrada', '')
+        if entrada and entrada != 'https://numbrsword.github.io/mis-carpetas/':
+            entrada = ''
+        return {'portal': u.geturl().rstrip('/'), 'entrada': entrada, 'temporal': True}
+    except (OSError, ValueError, TypeError):
+        return None
 
 
 def hash_clave(clave, sal):
@@ -96,6 +114,8 @@ CREATE TABLE IF NOT EXISTS adjuntos(clave TEXT PRIMARY KEY, nombre TEXT, tipo TE
 CREATE TABLE IF NOT EXISTS enlaces(efectivo TEXT PRIMARY KEY, token TEXT UNIQUE NOT NULL, fecha TEXT);
 CREATE TABLE IF NOT EXISTS envios(id INTEGER PRIMARY KEY AUTOINCREMENT, efectivo TEXT, carpeta TEXT, tipo TEXT, nota TEXT,
   nombre TEXT, mime TEXT, datos BLOB, tam INTEGER, fecha TEXT, estado TEXT DEFAULT 'nuevo', revisado TEXT);
+CREATE TABLE IF NOT EXISTS cuentas(efectivo TEXT PRIMARY KEY, usuario TEXT UNIQUE NOT NULL, sal TEXT NOT NULL, hash TEXT NOT NULL,
+  cambiar INTEGER NOT NULL DEFAULT 1, fallos INTEGER NOT NULL DEFAULT 0, bloqueo REAL NOT NULL DEFAULT 0, fecha TEXT);
 """)
 bd.commit()
 candado = threading.RLock()
@@ -351,7 +371,8 @@ def archivos_del_efectivo(efectivo_id):
     return propios, archivos
 
 
-def pagina_efectivo(token, ef, carpetas):
+def pagina_efectivo(base, ef, carpetas, cuenta=False):
+    """base: '/e/<código>' (enlace personal) o '/mis' (usuario y contraseña)."""
     e = html.escape
     _, archivos = archivos_del_efectivo(ef['id'])
     pendientes = [c for c in carpetas if not c['cerrada']]
@@ -362,7 +383,7 @@ def pagina_efectivo(token, ef, carpetas):
     filas = []
     for c in pendientes:
         docs = [a for a in archivos if a['carpeta'] == c['id']]
-        enlaces = ''.join('<li><a href="/e/%s/archivo?k=%s" target="_blank" rel="noopener">Ver / descargar: %s</a></li>' % (e(token), urllib.parse.quote(a['clave'], safe=''), e(a['nombre'] or 'Documento')) for a in docs)
+        enlaces = ''.join('<li><a href="%s/archivo?k=%s" target="_blank" rel="noopener">Ver / descargar: %s</a></li>' % (e(base), urllib.parse.quote(a['clave'], safe=''), e(a['nombre'] or 'Documento')) for a in docs)
         dias = c['dias']
         plazo = (' · vencida hace %d día(s)' % -dias if dias is not None and dias < 0 else ' · vence hoy' if dias == 0 else ' · faltan %d día(s)' % dias if dias is not None else '') if not c['cerrada'] else ''
         filas.append('<article class="carpeta"><h3>%s</h3><span class="t %s">%s</span><p class="m">%s%s%s</p><details><summary>Documentos (%d)</summary><ul>%s</ul></details>%s</article>' % (e(c['cf']), 'r' if c['estado'] == 'Vencida' else 'a' if c['orden'] == 1 else '', e(c['estado']), e(c['del']), ' · vence '+corta(c['venc']) if c['venc'] else '', e(plazo), len(docs), enlaces or '<li>No hay archivos guardados para esta carpeta.</li>', '<button type="button" data-elegir="%s">Enviar archivo de esta carpeta</button>' % e(c['id']) if not c['cerrada'] else ''))
@@ -372,10 +393,71 @@ def pagina_efectivo(token, ef, carpetas):
     for f in consultar('SELECT carpeta, tipo, nombre, fecha, estado FROM envios WHERE efectivo=? ORDER BY id DESC LIMIT 50', (ef['id'],)):
         enviados.append('<li><b>%s</b> · %s<br><span class="m">%s · %s · %s</span></li>' % (e(cf.get(f[0], 'Carpeta registrada en envío anterior')), e(ESTADOS_ENVIO.get(f[4], f[4])), e(TIPOS_ENVIO.get(f[1], f[1])), e(f[2]), e(f[3][:16].replace('T', ' '))))
     plantilla = (Path(__file__).parent / 'portal_efectivo.html').read_text(encoding='utf-8')
-    valores = {'IDENTIDAD': e((ef.get('grado', '')+' '+ef.get('nombre', '')).strip()), 'RECORDATORIOS': alertas, 'CARPETAS': ''.join(filas) or '<p>No tienes carpetas pendientes.</p>', 'OPCIONES': opciones, 'TIPOS': ''.join('<option value="%s">%s</option>' % (k,e(v)) for k,v in TIPOS_ENVIO.items()), 'ENVIADOS': ''.join(enviados) or '<li>Todavía no enviaste documentos.</li>', 'DESHABILITADO': '' if pendientes else 'disabled', 'MAXIMO': str(MAX_ARCHIVO)}
+    valores = {'IDENTIDAD': e((ef.get('grado', '')+' '+ef.get('nombre', '')).strip()), 'RECORDATORIOS': alertas, 'CARPETAS': ''.join(filas) or '<p>No tienes carpetas pendientes.</p>', 'OPCIONES': opciones, 'TIPOS': ''.join('<option value="%s">%s</option>' % (k,e(TIPOS_ENVIO[k])) for k in TIPOS_PORTAL), 'ENVIADOS': ''.join(enviados) or '<li>Todavía no enviaste documentos.</li>', 'DESHABILITADO': '' if pendientes else 'disabled', 'MAXIMO': str(MAX_ARCHIVO)}
     for k,v in valores.items():
         plantilla = plantilla.replace('__'+k+'__', v)
+    if cuenta:
+        plantilla = plantilla.replace('Este enlace es personal. Conserva su acceso para ti.', 'Tu usuario y contraseña son personales. <a href="/mis/clave">Cambiar contraseña</a> · <a href="/mis/salir">Salir</a>', 1)
     return plantilla
+
+
+# --- Cuentas de efectivos: usuario (CIP) y contraseña, como en Moral y Disciplina ---
+sesiones_personal = {}  # código de sesión -> (efectivo, vence)
+LETRAS_CLAVE = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
+INTENTOS_MAX, BLOQUEO_MIN, SESION_H = 5, 15, 8
+
+
+def clave_temporal():
+    return ''.join(secrets.choice(LETRAS_CLAVE) for _ in range(10))
+
+
+def usuario_de(ef):
+    return re.sub(r'\D', '', str(ef.get('cip') or ''))
+
+
+def dni_de(ef):
+    d = re.sub(r'\D', '', str(ef.get('dni') or ''))
+    return d if len(d) == 8 else ''
+
+
+def crear_cuenta(ef_id, store=None):
+    """Crea o reinicia la cuenta: usuario = CIP; contraseña inicial = DNI (decisión del usuario),
+    o una temporal si falta el DNI. En ambos casos se cambia obligatoriamente al primer ingreso."""
+    if store is None:
+        store, _ = estado_actual()
+    ef = next((x for x in (store or {}).get('efectivos', []) if x.get('id') == ef_id), None)
+    if not ef:
+        raise ValueError('Ese efectivo no existe.')
+    usuario = usuario_de(ef)
+    if len(usuario) < 6:
+        raise ValueError('Falta el CIP de este efectivo en Efectivos: es su usuario.')
+    otro = consultar('SELECT efectivo FROM cuentas WHERE usuario=? AND efectivo<>?', (usuario, ef_id), uno=True)
+    if otro:
+        raise ValueError('Ese CIP ya es el usuario de otro efectivo. Revisa los CIP en Efectivos.')
+    clave = dni_de(ef) or clave_temporal()
+    sal = secrets.token_hex(16)
+    with candado, bd:
+        bd.execute('INSERT OR REPLACE INTO cuentas(efectivo, usuario, sal, hash, cambiar, fallos, bloqueo, fecha) VALUES (?,?,?,?,1,0,0,?)',
+                   (ef_id, usuario, sal, hash_clave(clave, sal), ahora()))
+        bd.commit()
+        programar_respaldo()
+    cerrar_sesiones(ef_id)
+    return usuario, clave
+
+
+def cerrar_sesiones(ef_id):
+    for k, (ef, _) in list(sesiones_personal.items()):
+        if ef == ef_id:
+            sesiones_personal.pop(k, None)
+
+
+def pagina_simple(titulo, cuerpo):
+    return ('<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>%s</title>'
+            '<style>body{font:16px Arial,sans-serif;max-width:380px;margin:48px auto;padding:0 16px;background:#eef1f4;color:#16222c}h1{font-size:1.3rem}.m{color:#5c6b78;font-size:.9rem}'
+            'label{display:block;margin-top:12px;font-size:.9rem;color:#5c6b78}input,button{width:100%%;min-height:48px;padding:10px 12px;margin-top:6px;font:inherit;box-sizing:border-box;border-radius:8px;border:1px solid #d8dee4;background:#fff;color:inherit}'
+            'button{margin-top:16px;background:#1a8a4a;border:0;color:#fff;font-weight:700}.error{color:#c0342c;font-weight:600}a{color:#1a8a4a}'
+            '@media (prefers-color-scheme:dark){body{background:#0f1720;color:#e7edf3}input{background:#16212c;border-color:#2a3947}button{background:#1f9d55}.m,label{color:#93a3b3}a{color:#3fbf73}}</style></head>'
+            '<body><p class="m">CF · Mesa de Partes · Comisaría PNP de Ventanilla</p>%s</body></html>') % (html.escape(titulo), cuerpo)
 
 
 # --- Acceso ---
@@ -516,6 +598,11 @@ class Manejador(http.server.BaseHTTPRequestHandler):
         m = re.fullmatch(r'/e/([\w-]{20,60})/archivo', ruta)
         if m:
             return self.archivo_personal(m.group(1), q.get('k', [''])[0])
+        # Efectivos con usuario y contraseña. Nunca pasan por los permisos del administrador.
+        if ruta == '/ingresar':
+            return self.form_ingresar()
+        if ruta in ('/mis', '/mis/', '/mis/archivo', '/mis/clave', '/mis/salir'):
+            return self.mis(ruta, q)
         if ruta == '/entrar':
             return self.form_entrar()
         if not self.admin():
@@ -560,12 +647,15 @@ class Manejador(http.server.BaseHTTPRequestHandler):
             return self.responder(200, f[2], tipo, {'Content-Disposition': "%s; filename*=UTF-8''%s" % (disp, urllib.parse.quote(f[0])), 'Content-Security-Policy': "sandbox; default-src 'none'"})
         if ruta == '/api/enlaces':
             return self.json({f[0]: f[1] for f in consultar('SELECT efectivo, token FROM enlaces')})
+        if ruta == '/api/cuentas':
+            return self.json({f[0]: {'usuario': f[1], 'cambiar': bool(f[2]), 'bloqueada': f[3] > dt.datetime.now().timestamp(), 'fecha': f[4]}
+                              for f in consultar('SELECT efectivo, usuario, cambiar, bloqueo, fecha FROM cuentas')})
         if ruta == '/api/info':
             with candado:
                 version = estado_actual()[1]
                 conteos = {tabla: bd.execute('SELECT COUNT(*) FROM ' + tabla).fetchone()[0] for tabla in ('adjuntos', 'envios')}
                 respaldo = dict(estado_respaldo)
-            return self.json({'direcciones': direcciones(self.server.server_address[1]), 'red_local': bool(leer_config().get('red_local') or leer_config().get('tailscale')), 'tailscale': bool(leer_config().get('tailscale')), 'clave': bool(leer_config().get('clave')), 'version_servidor': VERSION_SERVIDOR, 'restauracion_atomica': True, 'max_restauracion': MAX_RESTAURACION, 'respaldo': respaldo, 'conteos': conteos, 'version_datos': version})
+            return self.json({'publicacion': publicacion_personal(), 'direcciones': direcciones(self.server.server_address[1]), 'red_local': bool(leer_config().get('red_local') or leer_config().get('tailscale')), 'tailscale': bool(leer_config().get('tailscale')), 'clave': bool(leer_config().get('clave')), 'version_servidor': VERSION_SERVIDOR, 'restauracion_atomica': True, 'max_restauracion': MAX_RESTAURACION, 'respaldo': respaldo, 'conteos': conteos, 'version_datos': version})
         self.responder(404, 'No existe.')
 
     do_HEAD = do_GET
@@ -629,6 +719,10 @@ class Manejador(http.server.BaseHTTPRequestHandler):
         m = re.fullmatch(r'/e/([\w-]{20,60})/enviar', ruta)
         if m:
             return self.recibir(m.group(1))
+        if ruta == '/ingresar':
+            return self.ingresar()
+        if ruta in ('/mis/enviar', '/mis/clave'):
+            return self.mis_post(ruta)
         if ruta == '/entrar':
             return self.entrar()
         if not (self.admin() and self.escritura_valida()):
@@ -665,7 +759,39 @@ class Manejador(http.server.BaseHTTPRequestHandler):
                     bd.execute('INSERT OR REPLACE INTO enlaces VALUES (?,?,?)', (ef, token, ahora()))
                     bd.commit()
                     programar_respaldo()
-            return self.json({'token': token, 'direcciones': direcciones(self.server.server_address[1])})
+            return self.json({'token': token, 'direcciones': direcciones(self.server.server_address[1]), 'publicacion': publicacion_personal()})
+        if ruta == '/api/cuentas/todas':
+            # Crea las que faltan para los efectivos activos (usuario CIP, contraseña inicial DNI). No reinicia las existentes.
+            store, _ = estado_actual()
+            existentes = {f[0] for f in consultar('SELECT efectivo FROM cuentas')}
+            creadas, faltan = [], []
+            for ef in (store or {}).get('efectivos', []):
+                if not ef.get('activo') or ef.get('id') in existentes:
+                    continue
+                nombre = (ef.get('grado', '') + ' ' + ef.get('nombre', '')).strip()
+                if not dni_de(ef):
+                    faltan.append(nombre + ': falta DNI')
+                    continue
+                try:
+                    usuario, _ = crear_cuenta(ef['id'], store)
+                    creadas.append({'efectivo': ef['id'], 'nombre': nombre, 'usuario': usuario})
+                except ValueError as error:
+                    faltan.append(nombre + ': ' + str(error))
+            return self.json({'creadas': creadas, 'faltan': faltan, 'direcciones': direcciones(self.server.server_address[1]), 'publicacion': publicacion_personal()})
+        if ruta == '/api/cuenta':
+            ef = str(cuerpo.get('efectivo') or '')
+            if cuerpo.get('quitar'):
+                with candado, bd:
+                    bd.execute('DELETE FROM cuentas WHERE efectivo=?', (ef,))
+                    bd.commit()
+                    programar_respaldo()
+                cerrar_sesiones(ef)
+                return self.json({'ok': True})
+            try:
+                usuario, clave = crear_cuenta(ef)
+            except ValueError as error:
+                return self.responder(400, str(error))
+            return self.json({'usuario': usuario, 'clave': clave, 'direcciones': direcciones(self.server.server_address[1]), 'publicacion': publicacion_personal()})
         if ruta == '/api/envio/estado':
             if cuerpo.get('estado') not in ESTADOS_ENVIO:
                 return self.responder(400, 'Estado.')
@@ -686,14 +812,18 @@ class Manejador(http.server.BaseHTTPRequestHandler):
         return f[0] if f else None
 
     def portal(self, token):
-        ef_id = self.efectivo_de_token(token)
+        return self.mostrar_portal(self.efectivo_de_token(token), '/e/' + token)
+
+    def mostrar_portal(self, ef_id, base, cuenta=False):
         ef, carpetas = carpetas_de(ef_id, incluir_cerradas=True) if ef_id else (None, [])
         if not ef:
             return self.responder(404, 'Este enlace no es válido. Pide uno nuevo a Mesa de Partes.')
-        self.responder(200, pagina_efectivo(token, ef, carpetas), 'text/html; charset=utf-8', {'Content-Security-Policy': "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; form-action 'none'"})
+        self.responder(200, pagina_efectivo(base, ef, carpetas, cuenta), 'text/html; charset=utf-8', {'Content-Security-Policy': "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; form-action 'none'"})
 
     def archivo_personal(self, token, clave):
-        ef_id = self.efectivo_de_token(token)
+        return self.archivo_de(self.efectivo_de_token(token), clave)
+
+    def archivo_de(self, ef_id, clave):
         if not ef_id:
             return self.responder(404, 'Este enlace no es válido.')
         propios, _ = archivos_del_efectivo(ef_id)
@@ -707,7 +837,118 @@ class Manejador(http.server.BaseHTTPRequestHandler):
         return self.responder(200, archivo[2], tipo, {'Content-Disposition': "%s; filename*=UTF-8''%s" % (disposicion, urllib.parse.quote(archivo[0] or 'documento')), 'Content-Security-Policy': "sandbox; default-src 'none'"})
 
     def recibir(self, token):
-        ef_id = self.efectivo_de_token(token)
+        return self.recibir_de(self.efectivo_de_token(token))
+
+    # --- Usuario y contraseña del efectivo ---
+    def sesion_personal(self):
+        c = re.search(r'(?:^|;\s*)personal=([\w-]{20,80})', self.headers.get('Cookie') or '')
+        if not c:
+            return None
+        ef_id, vence = sesiones_personal.get(c.group(1), (None, 0))
+        if vence <= dt.datetime.now().timestamp():
+            sesiones_personal.pop(c.group(1), None)
+            return None
+        cuenta = consultar('SELECT cambiar FROM cuentas WHERE efectivo=?', (ef_id,), uno=True)
+        if not cuenta:  # la cuenta se quitó: la sesión deja de valer
+            sesiones_personal.pop(c.group(1), None)
+            return None
+        return ef_id, bool(cuenta[0]), c.group(1)
+
+    def ir(self, destino, cookie=None):
+        self.responder(303, '', extra={'Location': destino, **({'Set-Cookie': cookie} if cookie else {})})
+
+    def form_ingresar(self, error='', usuario=''):
+        self.responder(200, pagina_simple('Mis carpetas', '<h1>Mis carpetas fiscales</h1><p class="m">Ingresa con tu CIP y tu contraseña.</p>' +
+                       ('<p class="error">%s</p>' % html.escape(error) if error else '') +
+                       '<form method="post" action="/ingresar"><label for="u">Usuario (CIP)</label><input id="u" name="usuario" inputmode="numeric" autocomplete="username" required value="%s">'
+                       '<label for="c">Contraseña</label><input id="c" type="password" name="clave" autocomplete="current-password" required><button>Ingresar</button></form>'
+                       '<p class="m">¿Olvidaste tu contraseña? Pide a Mesa de Partes que la reinicie.</p>' % html.escape(usuario)), 'text/html; charset=utf-8')
+
+    def ingresar(self):
+        try:
+            datos = urllib.parse.parse_qs(self.leer(4000).decode('utf-8'))
+        except (ValueError, OverflowError, UnicodeDecodeError):
+            datos = {}
+        usuario = re.sub(r'\D', '', datos.get('usuario', [''])[0])[:20]
+        clave = datos.get('clave', [''])[0][:200]
+        f = consultar('SELECT efectivo, sal, hash, fallos, bloqueo FROM cuentas WHERE usuario=?', (usuario,), uno=True) if usuario else None
+        ahora_ts = dt.datetime.now().timestamp()
+        if f and f[4] > ahora_ts:
+            return self.form_ingresar('Cuenta bloqueada por varios intentos fallidos. Espera %d minutos o pide a Mesa de Partes que reinicie tu contraseña.' % math.ceil((f[4] - ahora_ts) / 60), usuario)
+        if not f or not hmac.compare_digest(hash_clave(clave, f[1]), f[2]):
+            if f:
+                fallos = f[3] + 1
+                with candado, bd:
+                    bd.execute('UPDATE cuentas SET fallos=?, bloqueo=? WHERE efectivo=?', (0 if fallos >= INTENTOS_MAX else fallos, ahora_ts + BLOQUEO_MIN * 60 if fallos >= INTENTOS_MAX else 0, f[0]))
+                    bd.commit()
+            threading.Event().wait(1)  # frena los intentos repetidos
+            return self.form_ingresar('Usuario o contraseña incorrectos.', usuario)
+        with candado, bd:
+            bd.execute('UPDATE cuentas SET fallos=0, bloqueo=0 WHERE efectivo=?', (f[0],))
+            bd.commit()
+        codigo = secrets.token_urlsafe(32)
+        sesiones_personal[codigo] = (f[0], ahora_ts + SESION_H * 3600)
+        self.ir('/mis', 'personal=%s; HttpOnly; SameSite=Strict; Path=/; Max-Age=%d' % (codigo, SESION_H * 3600))
+
+    def mis(self, ruta, q):
+        s = self.sesion_personal()
+        if not s:
+            return self.ir('/ingresar')
+        ef_id, cambiar, codigo = s
+        if ruta == '/mis/salir':
+            sesiones_personal.pop(codigo, None)
+            return self.ir('/ingresar', 'personal=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0')
+        if ruta == '/mis/clave' or cambiar:
+            return self.form_clave(cambiar)
+        if ruta == '/mis/archivo':
+            return self.archivo_de(ef_id, q.get('k', [''])[0])
+        return self.mostrar_portal(ef_id, '/mis', True)
+
+    def form_clave(self, obligatorio, error=''):
+        self.responder(200, pagina_simple('Cambiar contraseña', '<h1>Cambiar contraseña</h1>' +
+                       ('<p class="m">Es tu primer ingreso o te reiniciaron la contraseña: crea una propia para continuar. Tu contraseña actual es tu DNI.</p>' if obligatorio else '<p class="m"><a href="/mis">← Volver a mis carpetas</a></p>') +
+                       ('<p class="error">%s</p>' % html.escape(error) if error else '') +
+                       '<form method="post" action="/mis/clave"><label for="a">Contraseña actual</label><input id="a" type="password" name="actual" autocomplete="current-password" required>'
+                       '<label for="n">Contraseña nueva (mínimo 8, con letras y números)</label><input id="n" type="password" name="nueva" autocomplete="new-password" minlength="8" required>'
+                       '<label for="r">Repite la contraseña nueva</label><input id="r" type="password" name="repite" autocomplete="new-password" minlength="8" required><button>Guardar contraseña</button></form>'),
+                       'text/html; charset=utf-8')
+
+    def mis_post(self, ruta):
+        s = self.sesion_personal()
+        if not s:
+            return self.responder(401, 'Tu sesión terminó. Vuelve a ingresar.') if ruta == '/mis/enviar' else self.ir('/ingresar')
+        ef_id, cambiar, codigo = s
+        if ruta == '/mis/enviar':
+            if cambiar:
+                return self.responder(403, 'Primero cambia tu contraseña.')
+            return self.recibir_de(ef_id)
+        try:
+            datos = urllib.parse.parse_qs(self.leer(4000).decode('utf-8'))
+        except (ValueError, OverflowError, UnicodeDecodeError):
+            datos = {}
+        actual, nueva, repite = (datos.get(k, [''])[0][:200] for k in ('actual', 'nueva', 'repite'))
+        f = consultar('SELECT sal, hash, usuario FROM cuentas WHERE efectivo=?', (ef_id,), uno=True)
+        if not f or not hmac.compare_digest(hash_clave(actual, f[0]), f[1]):
+            threading.Event().wait(1)
+            return self.form_clave(cambiar, 'La contraseña actual no es correcta.')
+        if nueva != repite:
+            return self.form_clave(cambiar, 'Las contraseñas nuevas no coinciden.')
+        store, _ = estado_actual()
+        dni = dni_de(next((x for x in (store or {}).get('efectivos', []) if x.get('id') == ef_id), {}))
+        if len(nueva) < 8 or not re.search(r'[A-Za-z]', nueva) or not re.search(r'\d', nueva) or nueva == actual or f[2] in nueva or (dni and dni in nueva):
+            return self.form_clave(cambiar, 'Usa al menos 8 caracteres con letras y números, distinta de la anterior y sin tu CIP ni tu DNI.')
+        sal = secrets.token_hex(16)
+        with candado, bd:
+            bd.execute('UPDATE cuentas SET sal=?, hash=?, cambiar=0, fecha=? WHERE efectivo=?', (sal, hash_clave(nueva, sal), ahora(), ef_id))
+            bd.commit()
+            programar_respaldo()
+        # Las demás sesiones abiertas con la contraseña anterior se cierran.
+        for k, (ef, _) in list(sesiones_personal.items()):
+            if ef == ef_id and k != codigo:
+                sesiones_personal.pop(k, None)
+        self.ir('/mis')
+
+    def recibir_de(self, ef_id):
         ef, carpetas = carpetas_de(ef_id) if ef_id else (None, [])
         if not ef:
             return self.responder(404, 'Este enlace no es válido.')
@@ -716,7 +957,7 @@ class Manejador(http.server.BaseHTTPRequestHandler):
         mime = (self.headers.get('Content-Type') or '').split(';')[0].strip().lower()
         if carpeta not in {c['id'] for c in carpetas}:
             return self.responder(400, 'Esa carpeta no está entre tus pendientes.')
-        if tipo not in TIPOS_ENVIO:
+        if tipo not in TIPOS_PORTAL:
             return self.responder(400, 'Tipo de documento no válido.')
         if mime not in MIME_DOCUMENTOS:
             return self.responder(400, 'Solo se aceptan PDF o fotos.')

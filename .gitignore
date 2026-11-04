@@ -13,6 +13,8 @@
 !/REGENERAR PAGINA.bat
 !/REINICIAR SERVIDOR.bat
 !/SINCRONIZAR.ps1
+!/INICIAR ACCESO INTERNET.bat
+!/DETENER ACCESO INTERNET.bat
 !/.automation/
 /.automation/*
 !/.automation/pagina_web/
@@ -21,6 +23,7 @@
 !/.automation/pagina_web/origen.py
 !/.automation/pagina_web/servidor.py
 !/.automation/pagina_web/acceso_internet.py
+!/.automation/pagina_web/publicar_acceso.py
 !/.automation/pagina_web/portal_efectivo.html
 !/.automation/pagina_web/plantilla.html
 !/.automation/pagina_web/tema.css

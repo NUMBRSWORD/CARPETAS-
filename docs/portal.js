@@ -10,15 +10,19 @@ function origenPortal(texto){
 }
 if(typeof module!=='undefined')module.exports={codigoPersonal,origenPortal};
 if(typeof document!=='undefined'){
- const input=document.getElementById('codigo'),estado=document.getElementById('estado'),boton=document.getElementById('entrar');let origen='';
- // El fragmento no se envía a GitHub; se retira antes de cargar la configuración.
+ const ingreso=document.getElementById('ingresar'),estado=document.getElementById('estado');let origen='';
+ ingreso.addEventListener('click',()=>{if(origen)location.assign(origen+'/ingresar')});
+ // Enlaces personales antiguos (#código): siguen llevando al portal. El fragmento no se envía a GitHub.
  const codigoHash=codigoPersonal(location.hash.slice(1));
  if(location.hash)history.replaceState(null,'',location.pathname+location.search);
- const entrar=codigo=>{if(!codigo){estado.textContent='Revisa el enlace o código que te entregó Mesa de Partes.';input.focus();return}location.replace(origen+'/e/'+codigo)};
- document.getElementById('acceso').addEventListener('submit',e=>{e.preventDefault();if(origen)entrar(codigoPersonal(input.value))});
  fetch('config.json',{cache:'no-store',credentials:'omit'}).then(r=>{if(!r.ok)throw Error();return r.json()}).then(c=>{
+  // La copia del repositorio de código conduce a la entrada estable, que mantiene el túnel vigente.
+  if(c.disponible===true&&c.entrada==='https://numbrsword.github.io/mis-carpetas/'){
+   estado.textContent='Abriendo el acceso personal…';location.replace(c.entrada+(codigoHash?'#'+codigoHash:''));return;
+  }
   origen=c.disponible===true?origenPortal(c.portal):'';
   if(!origen){estado.textContent='El acceso por internet está en preparación. Mesa de Partes te avisará cuando esté habilitado.';return}
-  boton.disabled=false;estado.textContent='Usa tu acceso personal para continuar.';if(codigoHash)entrar(codigoHash);
+  if(codigoHash)return location.replace(origen+'/e/'+codigoHash);
+  ingreso.disabled=false;estado.textContent='Ingresa con tu CIP y tu contraseña.';
  }).catch(()=>{estado.textContent='No se pudo comprobar el acceso. Vuelve a intentarlo en unos minutos.'});
 }

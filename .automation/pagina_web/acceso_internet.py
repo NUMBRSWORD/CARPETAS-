@@ -25,8 +25,15 @@ def ruta_permitida(metodo, destino):
         return False
     if metodo in ('GET', 'HEAD'):
         return bool(re.fullmatch('/e/' + TOKEN + r'/?', u.path) or
-                    re.fullmatch('/e/' + TOKEN + '/archivo', u.path))
-    return metodo == 'POST' and not u.query and bool(re.fullmatch('/e/' + TOKEN + '/enviar', u.path))
+                    re.fullmatch('/e/' + TOKEN + '/archivo', u.path) or
+                    u.path in ('/ingresar', '/mis', '/mis/', '/mis/archivo', '/mis/clave', '/mis/salir'))
+    return metodo == 'POST' and not u.query and bool(re.fullmatch('/e/' + TOKEN + '/enviar', u.path) or u.path in ('/ingresar', '/mis/enviar', '/mis/clave'))
+
+
+def cookie_personal(texto):
+    """Del navegador solo pasa la cookie de sesión del efectivo; nunca la del administrador."""
+    m = re.search(r'(?:^|;\s*)(personal=[\w-]{20,80})(?:;|$)', texto or '')
+    return m.group(1) if m else ''
 
 
 class Entrada(ThreadingHTTPServer):
@@ -97,7 +104,9 @@ class Puerta(BaseHTTPRequestHandler):
             self.send_header(k, v)
         self.send_header('Content-Length', str(len(datos)))
         self.send_header('Cache-Control', 'no-store, private')
-        self.send_header('Referrer-Policy', 'no-referrer')
+        # Los enlaces llevan el código en la dirección: nunca se comparte. En usuario y contraseña, Chrome
+        # necesita "same-origin" para enviar el Origin real del formulario (con "no-referrer" manda "null").
+        self.send_header('Referrer-Policy', 'no-referrer' if self.path.startswith('/e/') else 'same-origin')
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.send_header('X-Frame-Options', 'DENY')
         self.send_header('X-Robots-Tag', 'noindex, nofollow, noarchive')
@@ -116,7 +125,7 @@ class Puerta(BaseHTTPRequestHandler):
                 return self.responder(404, 'No existe. Usa tu enlace personal.')
             origen = self.headers.get('Origin')
             if origen and origen != 'https://' + self.server.dominio:
-                return self.responder(403, 'Abre tu enlace personal para enviar archivos.')
+                return self.responder(403, 'Vuelve a abrir la página de ingreso e inténtalo de nuevo.')
             if self.headers.get_all('Transfer-Encoding') or self.headers.get('Expect'):
                 return self.responder(400, 'Formato no admitido.')
             longitudes = self.headers.get_all('Content-Length', [])
@@ -129,7 +138,9 @@ class Puerta(BaseHTTPRequestHandler):
                 return self.responder(400, 'El archivo está vacío.')
             if self.command != 'POST' and largo:
                 return self.responder(400, 'Formato no admitido.')
-            token = self.path.split('/')[2]
+            # Enlaces: por código. Usuario y contraseña: por la IP real que informa Cloudflare.
+            partes = urlsplit(self.path).path.split('/')
+            token = partes[2] if partes[1] == 'e' else 'cuenta:' + (self.headers.get('CF-Connecting-IP') or 'sin-ip')
             if not self.server.permite_frecuencia(token, self.command == 'POST'):
                 return self.responder(429, 'Demasiados intentos. Espera unos minutos.')
             datos = self.rfile.read(largo) if largo else None
@@ -138,14 +149,23 @@ class Puerta(BaseHTTPRequestHandler):
             # El origen es fijo y local. No se reenvían cookies ni cabeceras de administrador.
             cab = {k: self.headers[k] for k in ('Content-Type', 'X-Carpeta', 'X-Tipo', 'X-Nombre', 'X-Nota') if k in self.headers}
             cab['Host'] = '127.0.0.1:' + str(self.server.origen)
+            sesion = cookie_personal(self.headers.get('Cookie'))
+            if sesion:
+                cab['Cookie'] = sesion
             c = http.client.HTTPConnection('127.0.0.1', self.server.origen, timeout=45)
             try:
                 c.request(self.command, self.path, body=datos, headers=cab)
                 respuesta = c.getresponse()
                 cuerpo = respuesta.read(MAX_RESPUESTA + 1)
-                if len(cuerpo) > MAX_RESPUESTA or not 200 <= respuesta.status < 300 and respuesta.status < 400:
+                redireccion = respuesta.status == 303 and re.fullmatch(r'/(?:ingresar|mis)', respuesta.getheader('Location') or '')
+                if len(cuerpo) > MAX_RESPUESTA or not (200 <= respuesta.status < 300 or redireccion) and respuesta.status < 400:
                     return self.responder(502, 'Respuesta inesperada del servidor local.')
                 cab = {k: v for k, v in respuesta.getheaders() if k.lower() in ('content-type', 'content-disposition', 'content-security-policy', 'x-nombre')}
+                if redireccion:
+                    cab['Location'] = respuesta.getheader('Location')
+                galleta = respuesta.getheader('Set-Cookie') or ''
+                if re.fullmatch(r'personal=[\w-]{0,80}; HttpOnly; SameSite=Strict; Path=/; Max-Age=\d+', galleta):
+                    cab['Set-Cookie'] = galleta + '; Secure'
                 cab.setdefault('Content-Type', 'application/octet-stream')
                 if 'text/html' in cab.get('Content-Type', ''):
                     cab['Content-Security-Policy'] = "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"

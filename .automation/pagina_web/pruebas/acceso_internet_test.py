@@ -62,7 +62,7 @@ class PruebasInternet(PruebasPortal):
     def test_envio_llega_sin_confirmar_automaticamente(self):
         a, _ = self.preparar()
         estado = self.estado()
-        cab = {'Origin': 'https://portal.example.test', 'X-Carpeta': 'PRUEBA-1', 'X-Tipo': 'otro', 'X-Nombre': 'ficticio.pdf', 'Content-Type': 'application/pdf'}
+        cab = {'Origin': 'https://portal.example.test', 'X-Carpeta': 'PRUEBA-1', 'X-Tipo': 'ampliacion', 'X-Nombre': 'ficticio.pdf', 'Content-Type': 'application/pdf'}
         self.assertEqual(self.internet('POST', '/e/' + a + '/enviar', b'%PDF-ficticio', cab)[0], 200)
         envios = json.loads(self.peticion('GET', '/api/envios')[1])
         self.assertEqual(envios[0]['estado'], 'nuevo')
