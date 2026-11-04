@@ -42,8 +42,10 @@ próximas a vencer; verde indica vigentes. Las carpetas sin fecha mantienen un t
 neutro. El buscador oculta las tarjetas que no coinciden. Para ver cambios de esta
 plantilla basta recargar el portal; no hace falta reiniciar el servidor.
 
-El formulario y el historial están en las pestañas **Enviar documento** y **Mis envíos**.
-Cambiar de pestaña conserva el borrador y el archivo seleccionado. El botón de una
+Justo debajo del buscador están las pestañas **Mis carpetas**, **Enviar documento** y
+**Mis envíos**. La barra permanece visible al desplazarse y cada panel aparece bajo
+ella, sin tener que bajar al final de las carpetas. Cambiar de pestaña conserva el
+borrador y el archivo seleccionado. El botón de una
 carpeta abre la pestaña de envío con esa carpeta elegida. Las pestañas también se
 pueden recorrer con las flechas del teclado, Inicio y Fin.
 
