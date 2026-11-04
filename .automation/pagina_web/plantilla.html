@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'; font-src data:; script-src 'unsafe-inline' 'wasm-unsafe-eval' 'self' file: http://localhost:* blob:; worker-src blob:; connect-src 'self' blob: data:">
+<title>Carpetas Fiscales Ventanilla</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 L28 7 V15 C28 23 22.5 28.5 16 31 C9.5 28.5 4 23 4 15 V7 Z' fill='%231f9d55'/%3E%3Cpath d='M10 16.5 L14 20.5 L22.5 11' stroke='%23fff' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#0f1720">
+<script>
+(function(){var t=null;try{t=localStorage.getItem('tema')}catch(e){}
+if(!t&&window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)t='light';
+if(t==='light')document.documentElement.setAttribute('data-theme','light')})();
+</script>
+<style>
+__TEMA__
+/* Documento: sigue las medidas de las plantillas Word (A4, márgenes 3,5 / 2 cm). */
+.sheet{position:relative;width:21cm;min-height:29.7cm;background:#fff;color:#000;padding:3.5cm 2cm 2cm 3.5cm;font:12pt/1.15 Arial,sans-serif;transform-origin:top left}
+:where(.sheet p){margin:0}
+.sheet mark{background:#fff3b0;color:#000}
+.mem{position:absolute;top:1cm;left:1cm;width:7cm;text-align:center;font-weight:700;font-size:8.5pt;line-height:1.1}
+.mem img{height:1cm;display:block;margin:0 auto 1px}
+.mem div:first-of-type{font-size:10pt}
+.dtitle{font:16pt/1.25 Impact,"Arial Narrow",sans-serif;text-decoration:underline;margin-bottom:.6cm}
+.dref{margin:0 0 .6cm 6.3cm}
+.just{text-align:justify}
+.right{text-align:right}
+.sign{position:relative;height:3.1cm;margin-top:.6cm}
+.sign img{position:absolute;left:5.6cm;top:-.63cm;width:3.1cm;height:3.1cm}
+.sign .post{position:absolute;left:8.3cm;right:0;top:1.1cm;text-align:center;font-size:8.5pt;line-height:1.15}
+.sign .post hr{border:0;border-top:1px solid #000;margin:0 .4cm 1px}
+.ini{font-size:9pt}
+.señor{display:grid;grid-template-columns:2cm 1fr;margin-bottom:.2cm}
+.ctable{width:100%;border-collapse:collapse;font-size:11pt;margin:.3cm 0}
+.ctable th,.ctable td{border:1px solid #000;color:#000;padding:5px 7px;font-size:11pt;vertical-align:top}
+.ctable th{width:34%;font-weight:700;background:#fff;text-transform:none;letter-spacing:normal}
+.ctable tbody tr:last-child td{border-bottom:1px solid #000}
+.csign{display:grid;grid-template-columns:1fr 1fr;gap:1cm;margin-top:2cm;text-align:center;font-size:10pt}
+.csign hr{border:0;border-top:1px solid #000;margin:0 0 3px}
+@media print{
+  @page{size:A4;margin:0}
+  html,body{background:#fff}
+  .no-print,header,.warn{display:none!important}
+  main{padding:0;max-width:none}
+  .doc-layout{display:block}
+  #sheetBox{padding:0;background:#fff;border:0;border-radius:0;height:auto!important;overflow:visible}
+  .sheet{transform:none!important;min-height:0;height:29.6cm;overflow:hidden}
+  .sheet mark{background:none}
+}
+</style>
+</head>
+<body>
+<header class="no-print">
+  <div class="topbar-inner">
+    <div class="brand"><span class="brand-badge">CF</span><span class="brand-titles"><span class="brand-title">Carpetas Fiscales</span><span class="brand-sub">Comisaría PNP de Ventanilla · Mesa de Partes</span></span></div>
+    <nav id="nav" aria-label="Secciones de Carpetas Fiscales"></nav>
+    <span id="guardado" class="guardado" role="status" aria-live="polite"></span>
+    <button id="tema" class="tema-toggle" type="button" aria-label="Cambiar tema claro/oscuro" title="Cambiar tema claro/oscuro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button>
+  </div>
+</header>
+<div class="warn" id="warn" role="alert" hidden></div>
+<div id="fechaControl" class="aviso-control no-print" hidden></div>
+<main id="app" tabindex="-1"></main>
+<dialog id="visorArchivo" class="visor-archivo no-print" aria-labelledby="visorTitulo">
+  <div class="visor-cabecera"><h2 id="visorTitulo">Documento</h2><div class="row"><button class="btn" id="visorGirar" disabled title="Girar la vista 90°">Girar ↻</button><button class="btn" id="visorDescargar" disabled>Descargar</button><button class="btn" id="visorCerrar" autofocus>Cerrar</button></div></div>
+  <div id="visorControles" class="visor-controles" hidden><button class="btn" id="visorAnterior">← Anterior</button><span id="visorPagina" role="status"></span><button class="btn" id="visorSiguiente">Siguiente →</button><button class="btn" id="visorMenos" aria-label="Reducir zoom">−</button><span id="visorZoom"></span><button class="btn" id="visorMas" aria-label="Ampliar zoom">+</button></div>
+  <div id="visorContenido" class="visor-contenido" aria-busy="false"></div>
+</dialog>
+<nav id="navMovil" class="nav-movil no-print" aria-label="Accesos principales"></nav>
+<dialog id="menuMovil" class="menu-movil no-print" aria-labelledby="tituloMenu">
+  <div class="menu-cabecera"><div><span class="eyebrow">Carpetas Fiscales</span><h2 id="tituloMenu">Todas las secciones</h2></div><button class="btn" id="cerrarMenu" autofocus>Cerrar</button></div>
+  <div id="menuSecciones" class="menu-secciones"></div>
+</dialog>
+<template id="guia">__GUIA__</template>
+<script type="application/json" id="base">__DATA__</script>
+<script type="application/json" id="assets">__ASSETS__</script>
+<script type="application/json" id="efectivos">__EFECTIVOS__</script>
+<script type="application/json" id="personalizacion">__PERSONALIZACION__</script>
+<script type="application/json" id="servidor">null</script>
+<script>
+'use strict';
+const KEY='carpetas_ventanilla_v1';
+const SIGLAS='COMOPPOL-PNP/DIRNOS/REGPOL-CALL/DIVOPUS-VENTANILLA-COM VENTANILLA.SEC';
+const ASSETS=JSON.parse(document.getElementById('assets').textContent);
+const BASE=JSON.parse(document.getElementById('base').textContent);
+const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+const isISO=v=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(v||''))return false;const d=new Date(v+'T00:00:00');return !isNaN(d)&&d.toISOString!==undefined&&d.getDate()===+v.slice(8)};
+const addDays=(iso,n)=>{const d=new Date(iso+'T00:00:00');d.setDate(d.getDate()+n);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+const corta=v=>isISO(v)?v.slice(8)+'/'+v.slice(5,7)+'/'+v.slice(0,4):(v||'');
+const larga=v=>isISO(v)?(+v.slice(8))+' de '+MESES[+v.slice(5,7)-1]+' de '+v.slice(0,4):'';
+
+const EFECTIVOS=JSON.parse(document.getElementById('efectivos').textContent);
+let store={edits:{},nuevos:[],cfg:{aviso:7},efectivos:EFECTIVOS};
+let persistente=true;
+// Abierta con ABRIR EN CHROME.bat, los datos vienen de la base de datos de esta PC; abierta como archivo, de este Chrome.
+const SRV=JSON.parse(document.getElementById('servidor').textContent);
+let srvVersion=SRV?SRV.version:0;
+const desdeGuardado=s=>({edits:s.edits||{},nuevos:s.nuevos||[],cfg:{aviso:7,...(s.cfg||{})},efectivos:s.efectivos||EFECTIVOS});
+if(SRV){if(SRV.store)store=desdeGuardado(SRV.store)}
+else try{const raw=localStorage.getItem(KEY);if(raw)store=desdeGuardado(JSON.parse(raw))}catch(e){persistente=false}
+const PERSONALIZACION=JSON.parse(document.getElementById('personalizacion')?.textContent||'{}');
+const FIRMA_DEF={fCip:'',fNom:'',fGra:'',fCar:'',iFir:'',...(PERSONALIZACION.firma||{})};
+// Una sola vez por navegador: pone el firmante y los datos de la lista de personal, sin perder quién está activo ni su cargo.
+function aplicarPersonal(s){
+  if(s.cfg.personalV>=1)return s;
+  Object.assign(s.cfg,FIRMA_DEF);
+  const clave=e=>String(e.nombre).normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().split(/\s+/);
+  const lista=[...s.efectivos];
+  for(const p of EFECTIVOS){
+    const k=clave(p),igual=x=>{const o=clave(x);return o[0]===k[0]&&o[1]===k[1]};
+    const parecidos=EFECTIVOS.filter(igual);
+    const e=lista.find(x=>igual(x)&&(parecidos.length<2||clave(x)[2]===k[2]));
+    if(e&&e!==p){const {id,activo,cargo}=e;Object.assign(e,p,{id,activo,cargo:cargo||p.cargo})}
+    else if(!e)lista.push(p);
+  }
+  s.efectivos=lista;s.cfg.personalV=1;
+  return s;
+}
+store=aplicarPersonal(store);
+__PERSISTENCIA__
+iniciarRecuperacion();
+
+let recs,byId,ADIC;
+function cargar(){
+  const todos=BASE.map(r=>({...r,...(store.edits[r.id]||{})})).concat(store.nuevos.map(n=>({...n,...(store.edits[n.id]||{})})));
+  // Los decretos adicionales (adic = carpeta de origen) solo salen en Decretos; no son carpetas.
+  recs=todos.filter(r=>!r.adic);ADIC=todos.filter(r=>r.adic);
+  byId=new Map(todos.map(r=>[r.id,r]));
+}
+function setField(id,k,v){const r=byId.get(id);if(!r)return;const m=new Date().toISOString();r[k]=v;r._mod=m;Object.assign(store.edits[id]=store.edits[id]||{},{[k]:v,_mod:m});save()}
+const fechaHora=v=>{if(!v)return '';const d=new Date(v);return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes())};
+// Lo editado antes de guardar la hora va después de lo que sí la tiene, por fecha de entrega.
+const tocada=r=>store.edits[r.id]||!r.hoja?1:0;
+const porModificacion=(a,b)=>String(b._mod||'').localeCompare(String(a._mod||''))||tocada(b)-tocada(a)||(tocada(a)?String(b.ent||'').localeCompare(String(a.ent||'')):0);
+
+const control=()=>isISO(store.cfg.control)?store.cfg.control:today();
+// La Fiscalía no da vigencia, solo pide informar el avance de forma periódica (CF 257-2026).
+const informePeriodico=r=>!r.venc&&/PERI[OÓ]DIC/i.test(r.plazo||'');
+function vigencia(r){
+  if(!(r.sec||r.cf||r.resp||r.rec||r.plazo||r.ofi||r.fis||r.imp||r.del))return 'SIN DATOS';
+  if(r.rem==='SÍ')return 'DESCARGADO';
+  if(r.rem==='DEVUELTA/ARCHIVADA')return 'DEVUELTA/ARCHIVADA';
+  // Sin descargo anotado en el archivo: manda la fecha, como en cualquier carpeta pendiente.
+  const sinEstado=r.rem!=='NO';
+  if(sinEstado&&(!r.venc||!isISO(r.venc)))return 'SIN ESTADO';
+  if(informePeriodico(r))return 'INFORME PERIÓDICO';
+  if(!r.venc)return (String(r.amp||'').trim()||/AMPLI|PRORRO/i.test((r.plazo||'')+' '+(r.obs||'')))?'CONFIRMAR AMPLIACIÓN':'CONFIRMAR VENCIMIENTO';
+  if(!isISO(r.venc))return 'FECHA INVÁLIDA';
+  const c=control();
+  if(r.venc<c)return 'VENCIDA';
+  if(r.venc===c)return 'VENCE HOY';
+  return r.venc<=addDays(c,+store.cfg.aviso||0)?'POR VENCER':'VIGENTE';
+}
+const TAG={'VENCIDA':'t-red','FECHA INVÁLIDA':'t-red','VENCE HOY':'t-amber','POR VENCER':'t-amber','CONFIRMAR AMPLIACIÓN':'t-amber','CONFIRMAR VENCIMIENTO':'t-amber','INFORME PERIÓDICO':'t-blue','SIN ESTADO':'t-blue','VIGENTE':'t-green','DESCARGADO':'t-gray','DEVUELTA/ARCHIVADA':'t-gray','SIN DATOS':'t-gray'};
+const tag=v=>'<span class="tag '+(TAG[v]||'t-gray')+'">'+esc(v)+'</span>';
+const ORDEN={'VENCIDA':0,'VENCE HOY':1,'POR VENCER':2,'FECHA INVÁLIDA':3,'CONFIRMAR AMPLIACIÓN':4,'CONFIRMAR VENCIMIENTO':5,'VIGENTE':6,'INFORME PERIÓDICO':6,'SIN ESTADO':7,'SIN DATOS':8,'DEVUELTA/ARCHIVADA':9,'DESCARGADO':10};
+
+const pendiente=r=>r.rem!=='SÍ'&&r.rem!=='DEVUELTA/ARCHIVADA';
+
+const GRUPOS=[
+ ['Oficio fiscal',[['sec','Sección','sel',['FAMILIA','DELITOS','TRÁNSITO']],['cf','Carpeta fiscal'],['ofi','Oficio recibido'],['fofi','Fecha del oficio','date'],['fis','Fiscalía / despacho'],['imp','Imputado'],['del','Delito'],['agr','Agraviado']]],
+ ['Recepción y plazo',[['rec','Recepción en Mesa de Partes','date'],['hrec','Hora de recepción','time'],['nreg','N.° de registro de ingreso'],['frec','Folios recibidos'],['rcp','Recepcionado por'],['sell','Recepción sellada y firmada','sel',['','SÍ','NO']],['plazo','Plazo del oficio'],['amp','Ampliación','area'],['aper','Apersonamientos','area'],['venc','Vencimiento vigente','date'],['vori','Fecha de vencimiento en la columna del archivo']]],
+ ['Decreto',[['resp','Responsable'],['grado','Grado del responsable'],['cip','CIP del responsable'],['cargo','Cargo del responsable'],['dec','N.° de decreto'],['fdec','Fecha del decreto','date'],['disp','Disposición (opcional, reemplaza el texto del decreto)','area'],['decf','Decreto firmado por el jefe','sel',['','SÍ','NO']]]],
+ ['Entrega con cargo',[['ent','Fecha de entrega','date'],['hent','Hora de entrega','time'],['fent','Folios entregados'],['entp','Entregado por'],['carf','Cargo firmado','sel',['','SÍ','NO']],['ucar','Ubicación del cargo']]],
+ ['Resultado',[['doc','Documento formulado','area'],['obs','Observación','area'],['rem','Descargada','sel',['NO','SÍ','DEVUELTA/ARCHIVADA','POR VERIFICAR']],['ubi','Ubicación / enlace']]],
+ ['Memorándum',[['mnum','N.° de memorándum'],['mfec','Fecha del memorándum','date'],['pvig','Plazo vigente'],['ofvig','Oficio o disposición vigente']]]
+];
+function campo(r,[k,label,tipo,ops],scope){
+  const v=r[k]??'';
+  const id='f_'+scope+'_'+k;
+  const attrs='id="'+id+'" data-k="'+k+'"';
+  if(tipo==='sel'){
+    const lista=ops.includes(v)?ops:[v,...ops];
+    return '<label>'+esc(label)+'<select '+attrs+'>'+lista.map(o=>'<option value="'+esc(o)+'"'+(o===v?' selected':'')+'>'+esc(o||'—')+'</option>').join('')+'</select></label>';
+  }
+  if(tipo==='area')return '<label class="wide">'+esc(label)+'<textarea '+attrs+'>'+esc(v)+'</textarea></label>';
+  if(tipo==='date'&&v&&!isISO(v))return '<label>'+esc(label)+' · fecha mal escrita, corrígela como aaaa-mm-dd<input class="bad" '+attrs+' value="'+esc(v)+'"></label>';
+  return '<label>'+esc(label)+'<input type="'+(tipo==='date'?'date':tipo==='time'?'time':'text')+'" '+attrs+' value="'+esc(v)+'"></label>';
+}
+
+const S={view:'resumen',q:'',sec:'',hoja:'',vig:'',orden:'mod',page:0,cur:null,doc:'decreto'};
+const NAV=[['resumen','Resumen'],['carpetas','Carpetas'],['asignar','Por asignar'],['decretos','Decretos'],['archivos','Archivos'],['recibidos','Recibidos'],['vencidas','Vencidas'],['lote','Subir oficios'],['efectivos','Efectivos'],['estadistica','Estadística'],['docs','Documentos'],['ajustes','Ajustes'],['guia','Guía']];
+const pantallaMovil=()=>!!window.matchMedia?.('(max-width:640px)').matches;
+function ir(view,extra){const menu=$('menuMovil'),desdeMenu=menu?.open;if(desdeMenu)menu.close();if(extra&&view==='carpetas'&&!('sinResponsable' in extra))S.sinResponsable=false;Object.assign(S,{view},extra||{});render();window.scrollTo(0,0);if(desdeMenu)$('app').focus({preventScroll:true})}
+const ICONOS_MOVIL={resumen:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-8H9v8H4a1 1 0 0 1-1-1Z"/>',carpetas:'<path d="M3 7V5a1 1 0 0 1 1-1h6l2 3h8a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"/>',vencidas:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',menu:'<path d="M4 6h16M4 12h16M4 18h16"/>'};
+const iconoMovil=k=>'<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+ICONOS_MOVIL[k]+'</svg>';
+function navegacionMovil(cuentas){
+  const activa=S.view==='ficha'?'carpetas':S.view,principales=['resumen','carpetas','vencidas'];
+  $('navMovil').innerHTML=[['resumen','Inicio'],['carpetas','Carpetas'],['vencidas','Vencidas'],['menu','Menú']].map(([k,t])=>'<button '+(k==='menu'?'id="abrirMenu" aria-haspopup="dialog" aria-controls="menuMovil"':'data-nav="'+k+'"')+(activa===k?' aria-current="page"':'')+(k==='menu'&&!principales.includes(activa)?' class="seccion-activa"':'')+'>'+iconoMovil(k)+'<span>'+t+'</span></button>').join('');
+  $('menuSecciones').innerHTML=NAV.map(([k,t])=>'<button class="btn'+(activa===k?' seccion-activa':'')+'" data-nav="'+k+'"'+(activa===k?' aria-current="page"':'')+'><span>'+t+'</span>'+(cuentas[k]?'<span class="menu-cuenta">'+cuentas[k]+'</span>':'')+'</button>').join('');
+}
+function render(){
+  actualizarControl();
+  const pendientesNav=porAsignar().length,memosNav=vencidasNuevas(),decretosNav=porDescargar().length;
+  $('nav').innerHTML=NAV.map(([k,t])=>'<button data-nav="'+k+'"'+(S.view===k||(k==='carpetas'&&S.view==='ficha')?' aria-current="page"':'')+'>'+t+(k==='asignar'&&pendientesNav?' ('+pendientesNav+')':'')+(k==='vencidas'&&memosNav?' ('+memosNav+(memosNav===1?' nueva)':' nuevas)'):'')+(k==='recibidos'&&nuevosRec()?' ('+nuevosRec()+')':'')+(k==='decretos'&&decretosNav?' ('+decretosNav+')':'')+'</button>').join('');
+  navegacionMovil({asignar:pendientesNav,vencidas:memosNav,decretos:decretosNav,recibidos:nuevosRec()});
+  ({resumen:vResumen,carpetas:vCarpetas,ficha:vFicha,docs:vDocs,archivos:vArchivos,ajustes:vAjustes,lote:vLote,efectivos:vEfectivos,vencidas:vVencidas,asignar:vAsignar,decretos:vDecretos,recibidos:vRecibidos,guia:vGuia,estadistica:vEstadistica})[S.view]();
+}
+
+const cabecera=(ey,t,sub)=>'<div class="view-header"><div><span class="eyebrow">'+esc(ey)+'</span><h2>'+esc(t)+'</h2>'+(sub?'<p class="view-subtitle">'+esc(sub)+'</p>':'')+'</div></div>';
+function vResumen(){
+  const n={},cuentaEtapas={};let pend=0;const porResp=new Map();
+  for(const r of recs){const etapa=etapaActual(r);cuentaEtapas[etapa]=(cuentaEtapas[etapa]||0)+1}
+  for(const r of recs){const v=vigencia(r);n[v]=(n[v]||0)+1;if(pendiente(r)){pend++;const e=porResp.get(r.resp||'(sin responsable)')||{p:0,v:0};e.p++;if(v==='VENCIDA')e.v++;porResp.set(r.resp||'(sin responsable)',e)}}
+  const card=(num,txt,vig)=>'<button class="card'+(vig==='VENCIDA'&&num?' urgente':'')+'" data-vig="'+esc(vig)+'"><b>'+num.toLocaleString('es-PE')+'</b><span>'+esc(txt)+'</span></button>';
+  const porHoja=new Map();
+  for(const r of recs)if(vigencia(r)==='VENCIDA'){const e=porHoja.get(r.hoja||'(nuevas)')||{v:0,d:0};e.v++;if(String(r.doc||'').trim())e.d++;porHoja.set(r.hoja||'(nuevas)',e)}
+  const hojas=[...porHoja.entries()].sort((a,b)=>b[1].v-a[1].v);
+  const top=[...porResp.entries()].sort((a,b)=>b[1].v-a[1].v||b[1].p-a[1].p).slice(0,12);
+  $('app').innerHTML=cabecera('Control de plazos','Resumen','Carpetas recibidas desde el 01/01/2026 · fecha de control: '+corta(control())+' · aviso con '+store.cfg.aviso+' días de anticipación')+'<div class="cards">'+
+    card(recs.length,'Carpetas registradas','')+card(pend,'Pendientes','__PEND')+'<button class="card'+(porAsignar().length?' urgente':'')+'" data-nav="asignar"><b>'+porAsignar().length+'</b><span>Por asignar</span></button>'+'<button class="card" data-nav="decretos"><b>'+porDescargar().length+'</b><span>Decretos no descargados</span></button>'+'<button class="card'+(vencidasNuevas()?' urgente':'')+'" data-nav="vencidas"><b>'+vencidasNuevas()+'</b><span>Vencidas sin memorándum</span></button>'+card(n['VENCIDA']||0,'Vencidas','VENCIDA')+
+    card((n['VENCE HOY']||0)+(n['POR VENCER']||0),'Vencen hoy o pronto','__PRONTO')+card(n['VIGENTE']||0,'Vigentes','VIGENTE')+
+    card((n['CONFIRMAR AMPLIACIÓN']||0)+(n['CONFIRMAR VENCIMIENTO']||0)+(n['FECHA INVÁLIDA']||0),'Plazo por confirmar','__PLAZO')+card(n['SIN ESTADO']||0,'Sin estado ni fecha válida','SIN ESTADO')+card(n['DESCARGADO']||0,'Descargadas','DESCARGADO')+card(n['DEVUELTA/ARCHIVADA']||0,'Devueltas o archivadas','DEVUELTA/ARCHIVADA')+
+    '</div><div class="panel"><h2>Carpetas por etapa</h2><div class="scroll"><table><thead><tr><th>Etapa actual</th><th class="num">Carpetas</th></tr></thead><tbody>'+
+    Object.keys(ETAPAS).map(e=>'<tr class="go" data-etapa="'+esc(e)+'"><td>'+tagEtapa(e)+'</td><td class="num">'+(cuentaEtapas[e]||0)+'</td></tr>').join('')+
+    '</tbody></table></div></div><div class="panel"><h2>Vencidas por hoja del archivo</h2><div class="scroll"><table><thead><tr><th>Hoja</th><th class="num">Vencidas</th><th class="num">Con documento formulado</th><th class="num">Sin documento</th></tr></thead><tbody>'+
+    hojas.map(([k,e])=>'<tr class="go" data-hojav="'+esc(k)+'"><td>'+esc(k)+'</td><td class="num">'+e.v+'</td><td class="num">'+e.d+'</td><td class="num">'+(e.v-e.d)+'</td></tr>').join('')+
+    '</tbody></table></div></div><div class="panel"><h2>Pendientes por responsable</h2><div class="scroll"><table><thead><tr><th>Responsable</th><th class="num">Pendientes</th><th class="num">Vencidas</th></tr></thead><tbody>'+
+    top.map(([k,e])=>'<tr class="go" data-resp="'+esc(k)+'"><td>'+esc(k)+'</td><td class="num">'+e.p+'</td><td class="num">'+e.v+'</td></tr>').join('')+
+    '</tbody></table></div></div>';
+}
+
+function filtrados(){
+  const terminos=nrm(S.q).split(' ').filter(Boolean);
+  const lista=recs.filter(r=>{
+    if(S.sec&&r.sec!==S.sec)return false;
+    if(S.hoja==='__NUEVAS'?!!r.hoja:(S.hoja&&r.hoja!==S.hoja))return false;
+    if(S.sinResponsable&&String(r.resp||'').trim())return false;
+    if(S.etapa&&etapaActual(r)!==S.etapa)return false;
+    const v=vigencia(r);
+    if(S.vig==='__PEND'&&!pendiente(r))return false;
+    if(S.vig==='__PRONTO'&&v!=='VENCE HOY'&&v!=='POR VENCER')return false;
+    if(S.vig==='__PLAZO'&&!['CONFIRMAR AMPLIACIÓN','CONFIRMAR VENCIMIENTO','FECHA INVÁLIDA'].includes(v))return false;
+    if(S.vig&&!S.vig.startsWith('__')&&v!==S.vig)return false;
+    if(terminos.length){const texto=nrm([r.id,r.cf,r.resp,r.ofi,r.imp,r.agr,r.fis,r.del,r.doc,r.obs,r.aper,r.sec].join(' '));if(!terminos.every(t=>texto.includes(t)))return false;}
+    return true;
+  });
+  return lista.map(r=>({r,v:vigencia(r)})).sort((a,b)=>(S.orden==='venc'?0:porModificacion(a.r,b.r))||ORDEN[a.v]-ORDEN[b.v]||(a.v==='VENCIDA'?String(b.r.venc||'').localeCompare(String(a.r.venc||'')):String(a.r.venc||'9').localeCompare(String(b.r.venc||'9'))));
+}
+function vCarpetas(){
+  const opt=(val,txt,cur)=>'<option value="'+esc(val)+'"'+(val===cur?' selected':'')+'>'+esc(txt)+'</option>';
+  $('app').innerHTML=cabecera('Mesa de Partes','Carpetas','Abre una carpeta para completar sus datos y generar sus documentos')+'<div class="panel search-panel"><div class="row">'+
+    '<label class="grow">Buscar carpeta o persona<input id="q" type="search" placeholder="N.° de carpeta, apellido u oficio" aria-describedby="ayudaBusqueda" value="'+esc(S.q)+'"></label><button class="btn main" id="nueva">Nueva carpeta</button></div>'+
+    '<details class="filtros-avanzados" id="filtrosAvanzados"'+(S.filtrosAbiertos?' open':'')+'><summary>Filtros y orden <span id="cuentaFiltros" class="tag t-green"></span></summary><div class="row">'+
+    '<label>Sección<select id="fsec">'+opt('','Todas',S.sec)+['FAMILIA','DELITOS','TRÁNSITO'].map(s=>opt(s,s,S.sec)).join('')+'</select></label>'+
+    '<label>Hoja del archivo<select id="fhoja">'+opt('','Todas',S.hoja)+opt('__NUEVAS','Nuevas de la página',S.hoja)+['C.F. FAMILIA','C.F. DELITOS','C.F. TRANSITO'].map(s=>opt(s,s,S.hoja)).join('')+'</select></label>'+
+    '<label>Estado<select id="fvig">'+[['','Todos'],['__PEND','Pendientes'],['VENCIDA','Vencidas'],['__PRONTO','Vencen hoy o pronto'],['VIGENTE','Vigentes'],['INFORME PERIÓDICO','Informe periódico'],['__PLAZO','Plazo por confirmar'],['SIN ESTADO','Sin estado ni fecha válida'],['DESCARGADO','Descargadas'],['DEVUELTA/ARCHIVADA','Devueltas o archivadas']].map(([a,b])=>opt(a,b,S.vig)).join('')+'</select></label>'+
+    '<label>Etapa<select id="fetapa">'+opt('','Todas',S.etapa)+Object.keys(ETAPAS).map(e=>opt(e,e,S.etapa)).join('')+'</select></label>'+
+    '<label>Ordenar por<select id="forden">'+[['mod','Última modificación'],['venc','Vencimiento']].map(([a,b])=>opt(a,b,S.orden)).join('')+'</select></label>'+
+    '<label class="filtro-check"><input type="checkbox" id="sinResponsable"'+(S.sinResponsable?' checked':'')+'>Solo sin responsable</label></div></details><p class="muted ayuda-busqueda" id="ayudaBusqueda">Busca por carpeta, oficio o persona, con o sin tildes.</p></div><div class="panel" id="tabla"></div>';
+  $('filtrosAvanzados').ontoggle=e=>{S.filtrosAbiertos=e.target.open};
+  tabla();
+}
+function tabla(){
+  const lista=filtrados(),POR=50,paginas=Math.max(1,Math.ceil(lista.length/POR));
+  if(S.page>=paginas)S.page=0;
+  const vista=lista.slice(S.page*POR,(S.page+1)*POR);
+  const filtros=[S.q,S.sec,S.hoja,S.vig,S.etapa,S.sinResponsable].filter(Boolean).length;
+  const filtrosExtra=[S.sec,S.hoja,S.vig,S.etapa,S.sinResponsable].filter(Boolean).length;
+  if($('cuentaFiltros')){$('cuentaFiltros').textContent=filtrosExtra?filtrosExtra+' activo'+(filtrosExtra===1?'':'s'):'';$('cuentaFiltros').hidden=!filtrosExtra}
+  const resumen='<div class="resultados"><span role="status" aria-live="polite"><b>'+lista.length.toLocaleString('es-PE')+'</b> de '+recs.length.toLocaleString('es-PE')+' carpetas'+(filtros?' · '+filtros+' filtro(s) activo(s)':'')+'</span><div class="row">'+(filtros?'<button class="btn" id="limpiarFiltros">Limpiar filtros</button>':'')+'<button class="btn" id="csvFiltrado"'+(lista.length?'':' disabled')+'>Exportar resultados (CSV)</button></div></div>';
+  $('tabla').innerHTML=resumen+(lista.length?'<div class="scroll"><table><thead><tr><th>Carpeta</th><th>Responsable</th><th>Etapa actual</th><th>Vencimiento</th><th>Estado</th><th class="hide-m">Modificada</th><th></th></tr></thead><tbody>'+
+    vista.map(({r,v})=>'<tr class="go" data-id="'+esc(r.id)+'"><td><span class="case">'+esc(r.cf||'(sin carpeta)')+'</span><br><span class="muted">'+esc(r.hoja?r.hoja+' · N.° '+r.n:r.id)+'</span></td><td>'+esc(r.resp)+'</td><td>'+tagEtapa(etapaActual(r))+'</td><td>'+esc(corta(r.venc))+'</td><td>'+tag(v)+'</td><td class="hide-m">'+esc(fechaHora(r._mod))+'</td><td style="white-space:nowrap">'+(tocada(r)&&r.resp?'<button class="btn" data-doc="decreto" data-docid="'+esc(r.id)+'">Decreto</button> ':'')+(v==='VENCIDA'||v==='VENCE HOY'||v==='POR VENCER'?'<button class="btn" data-memo="'+esc(r.id)+'">Memorándum</button>':'')+'</td></tr>').join('')+
+    '</tbody></table></div><div class="pager"><span>'+lista.length.toLocaleString('es-PE')+' carpetas · página '+(S.page+1)+' de '+paginas+'</span><span><button class="btn" data-page="-1"'+(S.page?'':' disabled')+'>Anterior</button> <button class="btn" data-page="1"'+(S.page+1<paginas?'':' disabled')+'>Siguiente</button></span></div>':'<div class="vacio"><b>No hay coincidencias</b><p>Prueba con menos palabras o limpia los filtros para ver todas las carpetas.</p></div>');
+}
+function nuevaCarpeta(){
+  let n=1,id;do{id='MP-'+String(n++).padStart(6,'0')}while(byId.has(id));
+  const r={id,rem:'NO',_mod:new Date().toISOString()};
+  store.nuevos.push(r);save();cargar();ir('ficha',{cur:id});
+}
+function vFicha(){
+  const r=byId.get(S.cur);
+  if(!r)return ir('carpetas');
+  $('app').innerHTML='<div class="panel"><div class="row" style="justify-content:space-between"><div><button class="btn" id="volver">← Carpetas</button></div><div class="row ficha-documentos"><button class="btn main" data-doc="decreto">Decreto</button><button class="btn main" data-doc="memorandum">Memorándum</button><button class="btn main" data-doc="cargo">Cargo</button></div></div>'+
+    '<h2 style="margin-top:12px;font-size:17px">'+esc(r.cf||'Carpeta nueva')+' <span class="muted" style="font-weight:400">· '+esc(r.hoja?r.hoja+' · N.° '+r.n+' · fila '+r.fila:r.id)+'</span></h2><section class="documentos-ficha"><h3>Documentos de esta carpeta</h3><div id="fichaDocumentos" aria-live="polite">Consultando archivos…</div><details class="grupo-ficha"><summary>Agregar documentos a esta carpeta</summary><div id="adjuntos"></div></details></section><div id="estado"></div>'+(['VENCIDA','VENCE HOY','POR VENCER'].includes(vigencia(r))?'<div class="alerta-venc"><div><b>'+(vigencia(r)==='VENCIDA'?'Esta carpeta está vencida':'Esta carpeta vence pronto')+'</b><br><span>Vencimiento: '+esc(corta(r.venc))+' · A cargo de: '+esc(r.resp||'sin responsable')+'</span></div><button class="btn main" data-memo="'+esc(r.id)+'">Generar memorándum de recordatorio</button></div>':'')+
+    GRUPOS.map(([t,fs],i)=>'<details class="grupo-ficha"'+(!pantallaMovil()||(!r.cf&&i===0)?' open':'')+'><summary>'+esc(t)+'</summary><div class="fields">'+fs.map(f=>campo(r,f,'fi')).join('')+'</div></details>').join('')+'</div>';
+  estado();
+  adjuntos();
+  cargarDocumentosFicha(r.id);
+}
+function estado(){
+  const r=byId.get(S.cur),el=$('estado');if(!el||!r)return;
+  const rutaAbierta=$('rutaFicha')?.open??!pantallaMovil();
+  el.innerHTML='<div class="steps">'+tag(vigencia(r))+tagEtapa(etapaActual(r))+'</div><details id="rutaFicha" class="grupo-ficha"'+(rutaAbierta?' open':'')+'><summary>Ruta del trámite</summary>'+rutaHTML(r)+'</details>';
+}
+
+const DOCF={
+ decreto:[['dec','N.° de decreto'],['fdec','Fecha','date'],['ofi','Oficio'],['fofi','Fecha del oficio','date'],['rec','Recepción','date'],['hrec','Hora de recepción','time'],['nreg','N.° de ingreso'],['cf','Carpeta fiscal'],['asu','Resumen del asunto'],['grado','Grado del responsable'],['resp','Responsable'],['cargo','Cargo del responsable'],['pvig','Plazo vigente'],['venc','Vencimiento vigente','date'],['disp','Disposición (opcional, reemplaza el texto)','area']],
+ memorandum:[['mnum','N.° de memorándum'],['mfec','Fecha','date'],['grado','Grado del responsable'],['resp','Responsable'],['cargo','Cargo del responsable'],['cf','Carpeta fiscal'],['fis','Fiscalía / despacho'],['ofi','Oficio'],['rec','Recepción','date'],['hrec','Hora de recepción','time'],['plazo','Plazo inicial'],['pvig','Plazo vigente'],['venc','Vencimiento vigente','date'],['ofvig','Oficio o disposición vigente']],
+ cargo:[['nreg','Registro de ingreso'],['cf','Carpeta fiscal'],['ofi','Oficio fiscal'],['fis','Fiscalía / despacho'],['resp','Efectivo que recibe'],['grado','Grado'],['cip','CIP'],['dec','N.° de decreto'],['fdec','Fecha del decreto','date'],['ent','Fecha de entrega','date'],['hent','Hora','time'],['fent','Folios entregados'],['entp','Entregado por']]
+};
+const FIRMA=[['fCip','Categoría y N.° de carné'],['fNom','Nombres y apellidos'],['fGra','Grado PNP'],['fCar','Cargo'],['iFir','Iniciales del firmante'],['iRed','Iniciales de quien redacta']];
+function vDocs(){
+  const r=S.cur&&byId.get(S.cur);
+  if(!r){$('app').innerHTML='<div class="panel"><h2>Documentos</h2><p>Primero abre una carpeta y elige decreto, memorándum o cargo.</p><p style="margin-top:10px"><button class="btn main" data-nav="carpetas">Ir a Carpetas</button></p></div>';return}
+  const c=(d,t)=>'<button class="btn'+(S.doc===d?' main':'')+'" data-doc="'+d+'">'+t+'</button>';
+  $('app').innerHTML='<div class="panel no-print"><div class="row" style="justify-content:space-between"><div class="row"><button class="btn" id="aFicha">← Carpeta '+esc(r.cf||r.id)+'</button>'+c('decreto','Decreto')+c('memorandum','Memorándum')+c('cargo','Cargo')+'</div><div class="row"><span id="faltan" class="tag t-amber" style="align-self:center"></span>'+(S.doc==='cargo'?'':'<button class="btn main" id="bajarWord">Descargar Word</button>')+'<button class="btn" id="imprimir">Imprimir / PDF</button></div></div></div>'+
+   '<div class="doc-layout"><div class="panel doc-form no-print"><h2>Datos del documento</h2><div class="fields">'+DOCF[S.doc].map(f=>campo(r,f,'do')).join('')+'</div>'+
+   (S.doc==='cargo'?'':'<fieldset><legend>Firma e iniciales</legend><div class="fields">'+FIRMA.map(([k,t])=>'<label>'+esc(t)+'<input data-cfg="'+k+'" value="'+esc(store.cfg[k]||'')+'"></label>').join('')+'</div></fieldset>')+
+   '</div><div id="sheetBox"><div class="sheet" id="sheet"></div></div></div>';
+  hoja();ajustarHoja();
+}
+function ph(v,t){v=String(v??'').trim();return v?esc(v):'<mark>['+esc(t)+']</mark>'}
+function membrete(){return '<div class="mem"><img alt="Escudo" src="'+ASSETS.escudo+'"><div>POLICIA NACIONAL DEL PERU</div><div>REGION POLICIAL CALLAO</div><div>DIVISION POLICIAL N° 03</div><div>COMISARIA VENTANILLA</div></div>'}
+function firma(cargoDef,clase){const c=store.cfg;return '<div class="sign'+(clase?' '+clase:'')+'"><img alt="Sello redondo" src="'+ASSETS.sello+'"><div class="post"><hr>'+ph(c.fCip,'CATEGORÍA Y N.° DE CARNÉ')+'<br>'+ph(c.fNom,'NOMBRES Y APELLIDOS')+'<br>'+ph(c.fGra,'GRADO PNP')+'<br>'+ph(c.fCar,cargoDef)+'<br>COMISARÍA PNP DE VENTANILLA</div></div>'}
+function iniciales(){const c=store.cfg;return '<p class="ini">'+ph(c.iFir,'FIRMANTE')+(String(c.iRed||'').trim()?'/'+esc(c.iRed):'')+'</p>'}
+// En el registro el responsable suele venir con el grado ("S2 PNP APELLIDOS"): se separa para no repetirlo.
+function partes(r){
+  const resp=String(r.resp||'').trim(),m=resp.match(/^(.{1,20}?\bPNP)\s+(.+)$/);
+  return {grado:String(r.grado||'').trim()||(m?m[1]:''),nombre:m?m[2]:resp};
+}
+function persona(r){const p=partes(r);return [p.grado,p.nombre].filter(Boolean).join(' ')}
+// El número del oficio o carpeta puede traer ya su prefijo ("OF. N° 12-2025", "EXP. N° 34-2025").
+function oficioTxt(v,t){v=String(v||'').trim();return v&&/^OF/i.test(v)?esc(v):'Oficio N.° '+ph(v,t)}
+function carpetaTxt(v,t){v=String(v||'').trim();if(/^EXP/i.test(v))return 'expediente '+esc(v.replace(/^EXP\.?\s*/i,''));v=v.replace(/^C\.?\s?F\.?\s*(?=N)/i,'');return v&&/^(EXP|C\.?\s?F|CARP|CASO)/i.test(v)||/N[°º]/.test(v)?'carpeta fiscal '+esc(v):'carpeta fiscal N.° '+ph(v,t)}
+// La columna de ampliación también guarda otras anotaciones ("REMITIR EN 48 HRS"): cuenta solo si la nota lo dice.
+function ampliada(r){return /AMPL|PRORR/i.test(String(r.obs||'')+' '+String(r.amp||''))}
+function plazoVigente(r){return r.pvig||(ampliada(r)?'':r.plazo)}
+function anio(v){return isISO(v)?v.slice(0,4):''}
+function docHTML(r0,doc){
+  // CIP, cargo y grado salen de la lista de efectivos si la carpeta no los trae.
+  const ef=efectivoDe(r0);
+  const r=ef?{...r0,resp:nombreEf(ef),grado:r0.grado||ef.grado,cip:r0.cip||ef.cip,cargo:r0.cargo||ef.cargo}:r0;
+  let h=membrete();
+  if(doc==='decreto'){
+    const texto=String(r.disp||'').trim()?esc(r.disp):'Visto el documento de la referencia, pase al '+ph(persona(r),'GRADO PNP, NOMBRES Y APELLIDOS')+(String(r.cargo||'').trim()?', '+esc(r.cargo):'')+', para que efectúe las diligencias dispuestas por la Fiscalía'+(informePeriodico(r)?' e informe periódicamente su avance':' dentro del plazo vigente de '+ph(plazoVigente(r),'PLAZO SEGÚN DISPOSICIÓN FISCAL')+', con vencimiento el '+ph(corta(r.venc),'FECHA DE VENCIMIENTO VIGENTE'))+'. Dé cuenta.';
+    h+='<p class="dref">REF. : '+oficioTxt(r.ofi,'NÚMERO Y SIGLAS')+(r.fofi?', de '+esc(corta(r.fofi)):'')+', recibido el '+ph(corta(r.rec),'FECHA DE RECEPCIÓN')+(r.hrec?' a las '+esc(r.hrec):'')+(r.nreg?', registro '+esc(r.nreg):'')+'. '+carpetaTxt(r.cf,'NÚMERO').replace(/^[ce]/,x=>x.toUpperCase())+', sobre '+ph(r.asu||r.del,'RESUMEN DEL ASUNTO')+'.</p>'+
+      '<p class="dtitle">DECRETO N.° '+ph(r.dec,'NÚMERO')+'-'+ph(anio(r.fdec),'AÑO')+'-'+SIGLAS+'</p>'+
+      '<p class="just" style="text-indent:5cm;margin-bottom:.4cm">'+texto+'</p>'+
+      '<p class="right">Ventanilla, '+ph(larga(r.fdec),'FECHA')+'</p>'+firma('CARGO DEL JEFE DE LA DEPENDENCIA')+iniciales();
+  }else if(doc==='memorandum'){
+    h+='<p class="dtitle" style="text-align:justify;margin-bottom:.4cm">MEMORÁNDUM N.° '+ph(r.mnum,'NÚMERO')+'-'+ph(anio(r.mfec),'AÑO')+'-'+SIGLAS+'</p>'+
+      '<p class="right" style="margin-bottom:.4cm">Ventanilla, '+ph(larga(r.mfec),'FECHA')+'</p>'+
+      '<div class="señor"><b>SEÑOR</b><b>: '+ph(partes(r).grado,'GRADO PNP')+'<br>'+ph(partes(r).nombre,'NOMBRES Y APELLIDOS')+(String(r.cargo||'').trim()?'<br>'+esc(r.cargo):'')+'</b></div>'+
+      '<div class="señor" style="margin-bottom:.4cm"><span>REF.</span><span>: Cuadro de control de carpetas fiscales.</span></div>'+
+      '<p class="just" style="text-indent:3.75cm;margin-bottom:.28cm">Me dirijo a Ud., para recordarle que tiene a su cargo la '+carpetaTxt(r.cf,'NÚMERO DE CARPETA')+', remitida por '+ph(r.fis,'FISCALÍA / DESPACHO')+' mediante el '+oficioTxt(r.ofi,'NÚMERO Y SIGLAS')+', recibido por Mesa de Partes el '+ph(corta(r.rec),'FECHA DE RECEPCIÓN')+(r.hrec?', a las '+esc(r.hrec):'')+'.</p>'+
+      '<p class="just" style="text-indent:2cm;margin-bottom:.28cm">El plazo inicial es de '+ph(r.plazo,'PLAZO INICIAL')+' y el plazo vigente es de '+ph(plazoVigente(r),'PLAZO VIGENTE')+', con vencimiento el '+ph(corta(r.venc),'FECHA DE VENCIMIENTO VIGENTE')+', conforme al '+(String(r.ofvig||'').trim()?esc(r.ofvig):ampliada(r)?ph('','OFICIO O DISPOSICIÓN FISCAL VIGENTE'):oficioTxt(r.ofi,'OFICIO O DISPOSICIÓN FISCAL VIGENTE'))+'.</p>'+
+      '<p class="just" style="text-indent:2cm;margin-bottom:.28cm">Cumpla con realizar las diligencias dispuestas por la Fiscalía y entregar el informe policial y la documentación sustentatoria al personal encargado del control de carpetas fiscales de esta comisaría dentro del plazo señalado, para su registro y trámite correspondiente.</p>'+
+      '<p class="just" style="text-indent:2cm;margin-bottom:.14cm">De verificarse incumplimiento, se procederá conforme a la Ley N.° 30714 y sus modificatorias.</p>'+iniciales()+firma('CARGO DEL FIRMANTE','memo');
+  }else{
+    const f=(t,v,p)=>'<tr><th>'+esc(t)+'</th><td>'+ph(v,p)+'</td></tr>';
+    h+='<p class="dtitle" style="text-align:center">CARGO DE ENTREGA DE CARPETA FISCAL</p><table class="ctable"><tbody>'+
+      f('Registro de ingreso',r.nreg,'N.° DE INGRESO')+f('Carpeta fiscal',r.cf,'NÚMERO')+f('Oficio fiscal',r.ofi,'OFICIO')+f('Fiscalía / despacho',r.fis,'FISCALÍA')+f('Efectivo que recibe',partes(r).nombre,'RESPONSABLE')+f('Grado',partes(r).grado,'GRADO')+f('CIP',r.cip,'CIP')+f('N.° de decreto',r.dec,'NÚMERO')+f('Fecha del decreto',corta(r.fdec),'FECHA')+f('Fecha de entrega',corta(r.ent),'FECHA')+f('Hora',r.hent,'HORA')+f('Folios entregados',r.fent,'FOLIOS')+
+      '</tbody></table><p class="just" style="margin-top:.4cm">Recibí la carpeta fiscal y la documentación antes identificada, en la fecha, hora y cantidad de folios consignadas, para la atención de la disposición del jefe.</p>'+
+      '<div class="csign"><div><hr>Firma de quien entrega<br>'+ph(r.entp,'ENTREGADO POR')+'</div><div><hr>Firma del efectivo que recibe<br>'+ph(persona(r),'RESPONSABLE')+'</div></div>';
+  }
+  return h;
+}
+function hoja(){
+  const r=byId.get(S.cur),el=$('sheet');if(!el||!r)return;
+  el.innerHTML=docHTML(r,S.doc);
+  const n=el.querySelectorAll('mark').length;
+  const t=$('faltan');if(t){t.textContent=n===1?'Falta 1 dato':n?'Faltan '+n+' datos':'Datos completos';t.className='tag '+(n?'t-amber':'t-green')}
+}
+function ajustarHoja(){
+  const box=$('sheetBox'),el=$('sheet');if(!box||!el)return;
+  const ancho=box.clientWidth-20,esc2=Math.min(1,ancho/el.offsetWidth);
+  el.style.transform='scale('+esc2+')';
+  box.style.height=(el.offsetHeight*esc2+20)+'px';
+}
+
+function descargar(nombre,tipo,contenido){
+  const url=URL.createObjectURL(new Blob([contenido],{type:tipo}));
+  const a=document.createElement('a');a.href=url;a.download=nombre;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+const COLS=[['id','ID registro'],['sec','Sección'],['cf','Carpeta fiscal'],['resp','Responsable'],['rec','Recepción Mesa de Partes'],['plazo','Plazo del oficio'],['amp','Ampliación'],['aper','Apersonamientos'],['venc','Vencimiento'],['_v','Estado'],['ofi','Oficio recibido'],['fofi','Fecha del oficio'],['fis','Fiscalía / despacho'],['imp','Imputado'],['del','Delito'],['agr','Agraviado'],['dec','N° decreto'],['ent','Entrega al responsable'],['doc','Documento formulado'],['obs','Observación'],['rem','Descargada'],['vori','Vencimiento en la columna del archivo'],['hoja','Hoja'],['n','N.° en la hoja'],['fila','Fila'],['ubi','Ubicación / enlace'],['nreg','N° registro de ingreso'],['hrec','Hora recepción'],['frec','Folios recibidos'],['rcp','Recepcionado por'],['sell','Recepción sellada y firmada'],['grado','Grado responsable'],['cip','CIP responsable'],['fdec','Fecha decreto'],['disp','Disposición'],['decf','Decreto firmado'],['hent','Hora entrega'],['fent','Folios entregados'],['carf','Cargo firmado'],['ucar','Ubicación del cargo'],['entp','Entregado por']];
+function csv(lista=recs){
+  const celda=v=>{let s=String(v??'');if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"'};
+  return '﻿'+[COLS.map(c=>celda(c[1])).join(';')].concat(lista.map(r=>COLS.map(([k])=>celda(k==='_v'?vigencia(r):r[k])).join(';'))).join('\r\n');
+}
+function vAjustes(){
+  const cambios=Object.keys(store.edits).length;
+  setTimeout(infoServidor);$('app').innerHTML=cabecera('Configuración','Ajustes')+'<div class="panel"><h2>Control de plazos</h2><div class="row"><label>Fecha de control (vacío = hoy)<input type="date" id="cControl" value="'+esc(store.cfg.control||'')+'"></label><label>Días de aviso<input type="number" min="0" max="365" id="cAviso" value="'+esc(store.cfg.aviso)+'"></label></div></div>'+
+   '<div class="panel"><h2>Numeración</h2><div class="row"><label>Siguiente N.° de decreto<input type="number" min="1" id="sigDec" value="'+esc(store.cfg.sigDec||1)+'"></label><label>Siguiente N.° de memorándum<input type="number" min="1" id="sigMemo" value="'+esc(siguienteMemo())+'"></label></div></div><div class="panel"><h2>Firma de decretos y memorandos</h2><div class="fields">'+FIRMA.map(([k,t])=>'<label>'+esc(t)+'<input data-cfg="'+k+'" value="'+esc(store.cfg[k]||'')+'"></label>').join('')+'</div></div>'+
+   (SRV?'<div class="panel"><h2>Base de datos de esta PC</h2><div id="srvInfo">Cargando…</div></div>':'')+'<div class="panel"><h2>Respaldo</h2><p>'+(SRV?'Tus cambios se guardan en la base de datos de esta PC. Descarga también un respaldo de vez en cuando y guárdalo fuera de esta PC.':'Tus cambios se guardan solo en este navegador y en esta computadora. Descarga un respaldo con frecuencia: si se borran los datos del navegador, se pierden.')+' Carpetas con cambios: <b>'+cambios+'</b>; nuevas: <b>'+store.nuevos.length+'</b>.</p><div class="row" style="margin-top:10px">'+(SRV?'<button class="btn main" id="bkBase">Copia completa de la PC (.db)</button>':'')+'<button class="btn" id="bkDown">Respaldo de datos</button><button class="btn" id="bkTodo">Respaldo con documentos (.json)</button><label class="btn">Cargar respaldo<input type="file" id="bkUp" accept="application/json,.json" hidden></label><button class="btn" id="csvDown">Exportar a Excel (CSV)</button></div>'+(SRV?'<p class="muted ayuda-busqueda">La copia .db incluye documentos, recibidos, enlaces e historial, para recuperación local. Cargar respaldo acepta el archivo .json; antes de restaurarlo se conserva automáticamente una copia completa de la base anterior.</p>':'')+'</div>';
+}
+function cargarRespaldo(file){
+  if(file.size>128*1024*1024)return alert('Este respaldo supera los 128 MB. Conserva el archivo para una recuperación local.');
+  const fr=new FileReader();
+  fr.onerror=()=>alert('No se pudo leer el archivo. Intenta seleccionarlo de nuevo.');
+  fr.onload=async()=>{
+    let iniciada=false;
+    try{
+      const s=JSON.parse(fr.result);
+      validarRespaldo(s);
+      if(!confirm('Esto reemplaza los datos guardados '+(SRV?'en la base de datos de esta PC':'en este navegador')+' por los del respaldo'+(Array.isArray(s.adjuntos)?', con sus '+s.adjuntos.length+' documentos':'')+'. ¿Continuar?'))return;
+      const nuevo=aplicarPersonal({edits:s.edits,nuevos:s.nuevos,cfg:{aviso:7,...(s.cfg||{})},efectivos:s.efectivos||EFECTIVOS});
+      for(const id of ['app','nav','navMovil','menuMovil'])$(id).inert=true;
+      if(SRV){
+        await restaurarEnServidor(nuevo,s.adjuntos);
+      }else{
+        await guardarAhora();
+        descargar('respaldo_antes_de_restaurar_'+today()+'.json','application/json',JSON.stringify(store));
+        iniciada=true;await subirAdjuntosRespaldo(s.adjuntos);store=nuevo;save();
+      }
+      cargar();ir('resumen');
+    }catch(e){alert((iniciada?'La restauración en este navegador no terminó. Algunos documentos pueden haberse copiado. ':'')+(e.message||'No se pudo leer el respaldo.'))}finally{for(const id of ['app','nav','navMovil','menuMovil'])$(id).inert=false;if($('bkUp'))$('bkUp').value=''}
+  };
+  fr.readAsText(file);
+}
+
+document.addEventListener('click',e=>{
+  if(e.target===$('menuMovil'))return $('menuMovil').close();
+  const t=e.target.closest('button,tr.go');if(!t)return;
+  if(L.registrando&&(t.id==='repartir'||t.id==='loteVaciar'||t.id==='loteRegistrar'||t.dataset.quitar!==undefined))return;
+  if(t.id==='fichaDocsActualizar')return cargarDocumentosFicha(S.cur);
+  if(t.id==='agregarDocCarpeta')return subirDocumentosCarpeta(t);
+  if(t.dataset.archivover)return visualizarAdjunto(t.dataset.archivover);
+  if(t.dataset.vincular)return vincularPendiente(t.dataset.vincular,t,false);
+  if(t.dataset.descartar)return vincularPendiente(t.dataset.descartar,t,true);
+  if(t.dataset.envver)return visualizarEnvio(t.dataset.envver);
+  if(t.id==='archivosActualizar')return vArchivos();
+  if(t.id==='visorCerrar')return $('visorArchivo').close();
+  if(t.id==='visorDescargar'&&VISOR.archivo)return bajar(VISOR.nombre,VISOR.archivo);
+  if(t.id==='visorAnterior')return cambiarPaginaVisor(-1);
+  if(t.id==='visorSiguiente')return cambiarPaginaVisor(1);
+  if(t.id==='visorGirar')return girarVisor();
+  if(t.id==='visorMas')return zoomVisor(.25);
+  if(t.id==='visorMenos')return zoomVisor(-.25);
+  if(t.id==='subirMemos'){if(LF.ocupado)return;if(LF.filas.length&&LF.tipo!=='mem'){alert('Termina o vacía el lote actual antes de cambiar a memorándums.');return}LF.tipo='mem';return ir('decretos')}
+  if(t.dataset.memover)return abrirCargoMemo(t.dataset.memover);
+  if(t.dataset.lfver!==undefined){const f=LF.filas[+t.dataset.lfver];if(f?.file)mostrarArchivo(async()=>({archivo:f.file,nombre:f.nombre}));return}
+  if(t.id==='abrirMenu')return $('menuMovil').showModal();
+  if(t.id==='cerrarMenu')return $('menuMovil').close();
+  if(t.dataset.memo){e.stopPropagation();const r=byId.get(t.dataset.memo);prepararMemo(r);return ir('docs',{cur:r.id,doc:'memorandum'})}
+  if(t.dataset.word)return descargarWord(byId.get(t.dataset.wid),t.dataset.word,t);
+  if(t.id==='lfGuardar')return guardarFirmados(t);
+  if(t.id==='lfVaciar'){if(LF.ocupado)return;LF.filas=[];LF.hecho='';return pintarLF()}
+  if(t.dataset.lfquitar!==undefined){if(LF.ocupado)return;LF.filas.splice(+t.dataset.lfquitar,1);return pintarLF()}
+  if(t.dataset.enlace)return mostrarEnlace(t.dataset.enlace);
+  if(t.dataset.envacep)return aceptarEnvio(t.dataset.envacep,t);
+  if(t.dataset.envest){const [i,est]=t.dataset.envest.split('|');return estadoEnvio(i,est).catch(e=>alert(e.message))}
+  if(t.id==='bkTodo')return respaldoCompleto(t);
+  if(t.id==='recActualizar')return refrescarRecibidos(true);
+  if(t.id==='bkBase')return descargarBaseCompleta(t);
+  if(t.dataset.adjsub)return subirAdj(t.dataset.adjsub,t);
+  if(t.dataset.adjver)return verAdj(t.dataset.adjver);
+  if(t.dataset.adjdel)return quitarAdj(t.dataset.adjdel);
+  if(t.id==='estImprimir')return imprimirEstadistica();
+  if(t.dataset.venvista){S.venVista=t.dataset.venvista;return vVencidas()}
+  if(t.dataset.asignar)return asignar(t.dataset.asignar,t);
+  if(t.dataset.numdec){const r=byId.get(t.dataset.numdec);if(!primerNumeroOk(r))return;numerar(r);return ir('docs',{doc:'decreto',cur:r.id})}
+  if(t.dataset.decword){const r=byId.get(t.dataset.decword);if(!primerNumeroOk(r))return;numerar(r);return descargarWord(r,'decreto',t).then(render)}
+  if(t.dataset.decmarca){setField(t.dataset.decmarca,'decbaj',new Date().toISOString());return render()}
+  if(t.dataset.decquita){setField(t.dataset.decquita,'decbaj','');return render()}
+  if(t.dataset.memosef)return memosDeEfectivo(t.dataset.memosef,t);
+  if(t.id==='memosTodos')return memosTodos(t);
+  if(t.dataset.vmemo){const r=byId.get(t.dataset.vmemo),ef=store.efectivos.find(x=>x.id===t.dataset.vef);return bajarMemos([{r,e:ef}],t)}
+  if(t.dataset.quitar!==undefined){L.filas.splice(+t.dataset.quitar,1);return vLote()}
+  if(t.id==='bajarWord')return descargarWord(byId.get(S.cur),S.doc,t);
+  if(t.id==='decretosZip')return decretosZip(t);
+  if(t.id==='repartir')return repartir();
+  if(t.id==='loteRegistrar')return registrarLote();
+  if(t.id==='loteVaciar'){L.filas=[];return vLote()}
+  if(t.id==='efTodos'){L.elegidos=new Set(store.efectivos.filter(x=>x.activo).map(x=>x.id));return vLote()}
+  if(t.id==='efNinguno'){L.elegidos=new Set();return vLote()}
+  if(t.id==='efNuevo'){let n=1,id;do{id='EF-N'+(n++)}while(store.efectivos.some(x=>x.id===id));store.efectivos.push({id,grado:'',nombre:'',cip:'',cargo:'',activo:true});save();return vEfectivos()}
+  if(t.dataset.nav)return ir(t.dataset.nav);
+  if(t.classList.contains('card'))return ir('carpetas',{vig:t.dataset.vig,etapa:'',q:'',sec:'',hoja:'',page:0});
+  if(t.dataset.etapa)return ir('carpetas',{etapa:t.dataset.etapa,vig:'',q:'',sec:'',hoja:'',page:0});
+  if(t.dataset.hojav)return ir('carpetas',{hoja:t.dataset.hojav==='(nuevas)'?'__NUEVAS':t.dataset.hojav,vig:'VENCIDA',etapa:'',q:'',sec:'',sinResponsable:false,page:0});
+  if(t.dataset.resp!==undefined)return ir('carpetas',{q:t.dataset.resp==='(sin responsable)'?'':t.dataset.resp,sinResponsable:t.dataset.resp==='(sin responsable)',vig:'__PEND',etapa:'',sec:'',hoja:'',page:0});
+  if(t.dataset.id)return ir('ficha',{cur:t.dataset.id});
+  if(t.dataset.page){S.page+=+t.dataset.page;tabla();window.scrollTo(0,0);return}
+  if(t.dataset.doc)return ir('docs',{doc:t.dataset.doc,cur:t.dataset.docid||S.cur});
+  if(t.id==='tema'){const claro=document.documentElement.getAttribute('data-theme')!=='light';if(claro)document.documentElement.setAttribute('data-theme','light');else document.documentElement.removeAttribute('data-theme');try{localStorage.setItem('tema',claro?'light':'dark')}catch(e){}return}
+  if(t.id==='limpiarFiltros')return ir('carpetas',{q:'',sec:'',hoja:'',vig:'',etapa:'',page:0});
+  if(t.id==='csvFiltrado')return descargar('carpetas_filtradas_'+today()+'.csv','text/csv;charset=utf-8',csv(filtrados().map(x=>x.r)));
+  if(t.id==='controlHoy'){store.cfg.control='';save();return render()}
+  if(t.id==='nueva')return nuevaCarpeta();
+  if(t.id==='volver')return ir('carpetas');
+  if(t.id==='aFicha')return ir('ficha');
+  if(t.id==='imprimir'){if(S.doc==='decreto'&&S.cur)setField(S.cur,'decbaj',new Date().toISOString());return window.print()}
+  if(t.id==='bkDown')return descargar('respaldo_carpetas_ventanilla_'+today()+'.json','application/json',JSON.stringify(store));
+  if(t.id==='csvDown')return descargar('carpetas_ventanilla_'+today()+'.csv','text/csv;charset=utf-8',csv());
+});
+function onField(e){
+  const t=e.target;
+  if(L.registrando&&(t.dataset.lf||['loteFecha','loteHora'].includes(t.id)))return;
+  if(t.id==='archivosBuscar'){S.archivosQ=t.value;pintarArchivos();return}
+  if(t.dataset.envfec){FECHAS_REC[t.dataset.envfec]=t.value;return}
+  if(t.id==='sinResponsable'){S.sinResponsable=t.checked;S.page=0;tabla();return}
+  if(t.id==='lfAuto'){LF.auto=t.checked;return}
+  if(t.id==='lfSeparar'){LF.separar=t.value==='si';return}
+  if(t.dataset.lfcarp!==undefined){const f=LF.filas[+t.dataset.lfcarp];f.id=t.value;f.manual=true;f.error='';if(f.file)f.estado='listo';return pintarLF()}
+  if(t.dataset.lffec!==undefined){LF.filas[+t.dataset.lffec].fecha=t.value;return}
+  if(t.dataset.lfdocfecha!==undefined){LF.filas[+t.dataset.lfdocfecha].fechaDocumento=t.value;return}
+  if(t.dataset.lfdocumento!==undefined){LF.filas[+t.dataset.lfdocumento].documento=t.value;return}
+  if(t.id==='lfTipo'){if(LF.filas.length&&!confirm('Hay archivos pendientes. ¿Vaciar esta lista para cambiar el tipo? Los guardados se conservan.'))return pintarLF();LF.tipo=t.value;LF.filas=[];LF.hecho='';return pintarLF()}
+  if(t.id==='lfFecha'){LF.fecha=t.value;for(const f of LF.filas)f.fecha=t.value;return pintarLF()}
+  if(t.dataset.vf){setField(t.dataset.vid,t.dataset.vf,t.value);return}
+  if(t.id==='efBuscar'){
+    const q=nrm(t.value);
+    for(const f of document.querySelectorAll('.ef-tabla tbody tr'))f.hidden=!nrm([...f.querySelectorAll('input')].map(i=>i.value).join(' ')).includes(q);
+    return;
+  }
+  if(t.dataset.eff){
+    const ef=store.efectivos.find(x=>x.id===t.closest('[data-ef]').dataset.ef);
+    ef[t.dataset.eff]=t.type==='checkbox'?t.checked:t.value;save();return;
+  }
+  if(t.dataset.elegir){
+    if(!L.elegidos)L.elegidos=new Set();
+    if(t.checked)L.elegidos.add(t.dataset.elegir);else L.elegidos.delete(t.dataset.elegir);
+    return;
+  }
+  if(t.dataset.lf){
+    const f=L.filas[+t.closest('[data-fila]').dataset.fila];
+    f[t.dataset.lf]=t.value;
+    if(f.modo==='amp'&&['dest','dias','unidad','desde','fofi','vamp'].includes(t.dataset.lf)){
+      if(t.dataset.lf==='vamp'){f.vampManual=true;return}
+      f.vampManual=false;calcularAmpliacion(f);
+      if(t.dataset.lf==='dias'){const v=t.closest('[data-fila]').querySelector('[data-lf=vamp]');if(v)v.value=f.vamp;return}
+      return vLote();
+    }
+    if(t.dataset.lf==='plazo'&&!f.vencManual){f.venc=vencSugerido(f,L.fecha);const v=t.closest('[data-fila]').querySelector('[data-lf=venc]');if(v)v.value=f.venc}
+    if(t.dataset.lf==='venc')f.vencManual=true;
+    return;
+  }
+  if(t.id==='loteFecha'){L.fecha=t.value;if(L.filas.some(f=>f.modo==='amp'&&f.desde==='rec')){L.filas.forEach(f=>f.modo==='amp'&&calcularAmpliacion(f));vLote()}return}
+  if(t.id==='loteHora'){L.hora=t.value;return}
+  if(t.id==='sigDec'){store.cfg.sigDec=Math.max(1,+t.value||1);save();return}
+  if(t.id==='sigMemo'){store.cfg.sigMemo=Math.max(1,+t.value||1);save();return}
+  if(t.dataset.k&&S.cur){
+    setField(S.cur,t.dataset.k,t.value);
+    if(t.classList.contains('bad')&&isISO(t.value))t.classList.remove('bad');
+    estado();hoja();ajustarHoja();
+  }else if(t.dataset.cfg){
+    store.cfg[t.dataset.cfg]=t.value;save();hoja();ajustarHoja();
+  }else if(t.id==='q'){S.q=t.value;S.page=0;tabla()}
+  else if(t.id==='fsec'){S.sec=t.value;S.page=0;tabla()}
+  else if(t.id==='fhoja'){S.hoja=t.value;S.page=0;tabla()}
+  else if(t.id==='fvig'){S.vig=t.value;S.page=0;tabla()}
+  else if(t.id==='decQ'){S.decQ=t.value;listaDec()}
+  else if(t.id==='fetapa'){S.etapa=t.value;S.page=0;tabla()}
+  else if(t.id==='recFiltro'){S.recFiltro=t.value;pintarRecibidos()}
+  else if(t.id==='forden'){S.orden=t.value;S.page=0;tabla()}
+  else if(t.id==='estAnio'){S.estAnio=t.value;vEstadistica()}
+  else if(t.id==='estMes'){S.estMes=t.value;vEstadistica()}
+  else if(t.id==='estSec'){S.estSec=t.value;vEstadistica()}
+  else if(t.id==='cControl'){store.cfg.control=t.value;save();actualizarControl()}
+  else if(t.id==='cAviso'){store.cfg.aviso=Math.min(365,Math.max(0,Math.trunc(+t.value||0)));save()}
+}
+document.addEventListener('input',onField);
+document.addEventListener('change',e=>{
+  if(e.target.dataset.k==='dec'&&S.cur)return avisarRepetido(S.cur,e.target.value);
+  if(e.target.id==='lfArchivos'&&e.target.files.length)return agregarFirmados(e.target.files);
+  if(e.target.id==='bkUp'&&e.target.files[0])return cargarRespaldo(e.target.files[0]);
+  if(e.target.id==='loteArchivos'&&e.target.files.length)return agregarArchivos(e.target.files);
+  if(e.target.tagName==='SELECT')return; // ya atendido por el evento input
+});
+for(const ev of ['dragover','drop'])document.addEventListener(ev,e=>{
+  if(S.view!=='lote')return;
+  e.preventDefault();
+  if(ev==='drop'&&e.dataTransfer?.files?.length)agregarArchivos(e.dataTransfer.files);
+});
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){
+    e.preventDefault();if($('app').inert)return;if($('menuMovil').open)$('menuMovil').close();if(S.view!=='carpetas')ir('carpetas');$('q').focus();$('q').select();return;
+  }
+  if((e.key==='Enter'||e.key===' ')&&e.target.matches('tr.go')){e.preventDefault();e.target.click()}
+});
+function actualizarControl(){
+  const el=$('fechaControl');if(!el)return;
+  el.hidden=!isISO(store.cfg.control);
+  if(!el.hidden)el.innerHTML='<span>Fecha de control fijada en <b>'+esc(corta(store.cfg.control))+'</b>. Los plazos se calculan con esa fecha.</span><button class="btn" id="controlHoy">Usar fecha de hoy</button>';
+}
+let diaVisual=today();
+function actualizarDia(){
+  const dia=today();if(dia===diaVisual)return;
+  if(document.activeElement?.matches?.('input,select,textarea'))return;
+  diaVisual=dia;
+  if(isISO(store.cfg.control))return;
+  if(['resumen','carpetas','vencidas','guia'].includes(S.view))render();
+  else if(S.view==='ficha')estado();
+}
+window.addEventListener('focus',actualizarDia);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)actualizarDia()});
+setInterval(actualizarDia,60000);
+window.addEventListener('resize',ajustarHoja);
+window.addEventListener('beforeprint',()=>{const el=$('sheet'),b=$('sheetBox');if(el){el.style.transform='none';b.style.height='auto'}});
+window.addEventListener('afterprint',ajustarHoja);
+
+__LOTE__
+// Celular (como Moral y Disciplina): las tablas de 4 o más columnas se ven como tarjetas; cada celda lleva el nombre de su columna.
+function tarjetas(){
+  for(const tr of document.querySelectorAll('#app tr.go')){tr.tabIndex=0;tr.setAttribute('aria-label','Abrir: '+tr.textContent.trim().slice(0,120))}
+  for(const t of document.querySelectorAll('#app table:not([data-tj])')){
+    t.dataset.tj='';
+    if(t.classList.contains('no-tarjeta'))continue;
+    const th=[...t.querySelectorAll('thead th')];
+    if(th.length<4||th.filter(h=>h.classList.contains('num')).length>2)continue;
+    t.classList.add('tarjetas');
+  }
+  for(const t of document.querySelectorAll('#app table.tarjetas')){
+    const th=[...t.querySelectorAll('thead th')].map(h=>h.textContent.trim());
+    for(const tr of t.querySelectorAll('tbody tr:not([data-tj])')){tr.dataset.tj='';[...tr.children].forEach((td,i)=>{if(th[i])td.dataset.l=th[i]})}
+  }
+}
+new MutationObserver(tarjetas).observe($('app'),{childList:true,subtree:true});
+cargar();avisoGuardado();render();
+if(SRV){refrescarRecibidos();setInterval(refrescarRecibidos,60000);if(!SRV.store)setTimeout(()=>alert('La base de datos de esta PC está vacía. Para pasar lo que tenías: abre la página anterior con ABRIR PAGINA ANTERIOR.bat, ve a Ajustes, descarga el respaldo con documentos y cárgalo aquí en Ajustes.'),300)}
+</script>
+</body>
+</html>

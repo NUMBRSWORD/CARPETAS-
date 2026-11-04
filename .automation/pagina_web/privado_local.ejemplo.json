@@ -1,0 +1,10 @@
+{
+  "vence_confirmado": {},
+  "datos_decreto": {},
+  "adicionales": {},
+  "firma": {"fCip": "", "fNom": "", "fGra": "", "fCar": "", "iFir": ""},
+  "rol_seccion": {"FAMILIA": [], "DEINPOL": [], "TRÁNSITO": []},
+  "grado_rol": {},
+  "rol_inactivo_v1": [],
+  "decretos_indicados": []
+}

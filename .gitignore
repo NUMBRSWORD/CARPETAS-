@@ -1,0 +1,43 @@
+# Lista cerrada: Git solo admite el código indicado. Los datos permanecen en la PC.
+/*
+!/.gitignore
+!/.gitattributes
+!/README.md
+!/docs/
+/docs/*
+!/docs/index.html
+!/docs/portal.js
+!/docs/portal.css
+!/docs/config.json
+!/ABRIR EN CHROME.bat
+!/REGENERAR PAGINA.bat
+!/REINICIAR SERVIDOR.bat
+!/SINCRONIZAR.ps1
+!/.automation/
+/.automation/*
+!/.automation/pagina_web/
+/.automation/pagina_web/*
+!/.automation/pagina_web/construir.py
+!/.automation/pagina_web/origen.py
+!/.automation/pagina_web/servidor.py
+!/.automation/pagina_web/acceso_internet.py
+!/.automation/pagina_web/portal_efectivo.html
+!/.automation/pagina_web/plantilla.html
+!/.automation/pagina_web/tema.css
+!/.automation/pagina_web/lote.js
+!/.automation/pagina_web/persistencia.js
+!/.automation/pagina_web/guia.html
+!/.automation/pagina_web/privado_local.ejemplo.json
+!/.automation/pagina_web/abrir.ps1
+!/.automation/pagina_web/reiniciar.ps1
+!/.automation/pagina_web/pruebas/
+/.automation/pagina_web/pruebas/*
+!/.automation/pagina_web/pruebas/cliente.cjs
+!/.automation/pagina_web/pruebas/servidor_test.py
+!/.automation/pagina_web/pruebas/servidor_avanzado_test.py
+!/.automation/pagina_web/pruebas/portal_test.py
+!/.automation/pagina_web/pruebas/acceso_internet_test.py
+!/.automation/pagina_web/pruebas/codigo_git_test.py
+!/.automation/pagina_web/pruebas/verificar_entrega.py
+!/.automation/pagina_web/pruebas/sync_test.ps1
+# No incluir Excel, SQLite, adjuntos, personal, plantillas firmadas, respaldos ni HTML generado.
