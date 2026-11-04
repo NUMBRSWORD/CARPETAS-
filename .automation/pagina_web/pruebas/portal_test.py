@@ -47,7 +47,7 @@ class PruebasPortal(PruebasServidor):
     def archivo(self, clave):
         self.assertEqual(self.peticion('PUT', '/api/adjunto?'+urllib.parse.urlencode({'k': clave, 'n': 'ficticio.pdf', 't': 'application/pdf'}), b'%PDF-ficticio')[0], 200)
 
-    def test_portal_solo_muestra_propias_y_recordatorios(self):
+    def test_portal_solo_muestra_propias_y_vencimientos(self):
         a, _ = self.preparar()
         codigo, cuerpo = self.peticion('GET', '/e/'+a)
         self.assertEqual(codigo, 200)
@@ -56,7 +56,7 @@ class PruebasPortal(PruebasServidor):
         self.assertNotIn('CF 100-2026', texto)
         self.assertIn('vencida hace 2 día(s)', texto)
         self.assertNotIn('CF 101-2026', texto)
-        self.assertIn('Recordatorios', texto)
+        self.assertNotIn('Recordatorios', texto)
         self.assertNotIn('__OPCIONES__', texto)
 
     def test_archivos_ajenos_no_accesibles_aunque_conozca_clave(self):
@@ -120,7 +120,9 @@ class PruebasPortal(PruebasServidor):
 
     def test_aviso_cero_no_se_convierte_en_siete_dias(self):
         a, _ = self.preparar(aviso=0)
-        self.assertIn('Vencen pronto: 0', self.peticion('GET', '/e/'+a)[1].decode())
+        texto = self.peticion('GET', '/e/'+a)[1].decode()
+        self.assertIn('CF PRONTA FICTICIA (Vigente)', texto)
+        self.assertNotIn('CF PRONTA FICTICIA (Vence pronto)', texto)
 
 
 if __name__ == '__main__':

@@ -1,7 +1,7 @@
 # Carpetas fiscales
 
 Aplicación de Mesa de Partes con portal personal de efectivos, documentos por carpeta,
-recordatorios de vencimiento y recepción de archivos con confirmación del administrador.
+seguimiento de vencimientos y recepción de archivos con confirmación del administrador.
 
 ## Dónde se guarda todo
 
@@ -42,6 +42,10 @@ próximas a vencer; verde indica vigentes. Las carpetas sin fecha mantienen un t
 neutro. El buscador oculta las tarjetas que no coinciden. Para ver cambios de esta
 plantilla basta recargar el portal; no hace falta reiniciar el servidor.
 
+La cabecera con el nombre del efectivo es un cuadro desplegable, cerrado al entrar.
+Al pulsarlo aparecen actualizar, cambiar contraseña y salir. No se muestra un bloque
+general de recordatorios; los estados y fechas siguen en cada tarjeta de carpeta.
+
 Justo debajo del buscador están las pestañas **Mis carpetas**, **Enviar documento** y
 **Mis envíos**. La barra se desplaza junto con la página y no se superpone al contenido.
 Cada panel aparece bajo ella, sin bajar al final de las carpetas. Cambiar de pestaña conserva el
@@ -73,8 +77,8 @@ con su titular y renovarlo si se divulga.
 
 Cada efectivo ve solo sus pendientes, documentos y envíos. El archivo enviado llega
 como «Por revisar»; en **Recibidos** el administrador lo confirma u observa. Los
-recordatorios aparecen al abrir/actualizar el portal; no hay notificaciones con la
-página cerrada. El acceso usa un túnel temporal: la PC debe permanecer encendida y
+vencimientos se muestran en las tarjetas; no hay notificaciones con la página
+cerrada. El acceso usa un túnel temporal: la PC debe permanecer encendida y
 conectada. `INICIAR ACCESO INTERNET.bat` mantiene la conexión y actualiza la dirección
 en la entrada estable; `DETENER ACCESO INTERNET.bat` la cierra sin cerrar la base local.
 
@@ -85,7 +89,7 @@ personales. Pages se configura desde `main`, carpeta `/docs`, y conduce a la ent
 estable indicada arriba. El enlace personal antiguo puede tener la forma
 `https://<usuario>.github.io/<repositorio>/#<código-personal>`: el fragmento no se envía a
 GitHub y la pantalla lleva al portal de la PC. No publicar códigos de efectivos en Git.
-La pantalla también permite pegar el enlace personal entregado por Mesa de Partes.
+La pantalla ofrece el ingreso con usuario y contraseña.
 
 ## Pruebas
 
